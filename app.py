@@ -221,9 +221,12 @@ def exportar_paleta_imagem(event):
     draw = ImageDraw.Draw(img_final)
     
     try:
-        font_hex = ImageFont.load_default(size=16)
-        font_pkmn = ImageFont.load_default(size=11)
-    except:
+        caminho_fonte = "fonts/VCR_OSD_MONO_1.001.ttf"
+
+        font_hex = ImageFont.truetype(caminho_fonte, size=16)
+        font_pkmn = ImageFont.truetype(caminho_fonte, size=16)
+    except Exception as e:
+        print(f"Erro ao carregar fonte do diretório, usando a padrão: {e}")
         font_hex = ImageFont.load_default()
         font_pkmn = ImageFont.load_default()
     
@@ -340,7 +343,165 @@ def exportar_paleta_imagem(event):
     except Exception as e:
         print("Erro ao processar download da imagem:", e)
 
-document.querySelector("#btn-exportar").addEventListener("click", create_proxy(exportar_paleta_imagem))        
+def exportar_paleta_stories(event):
+    global poke_data
+    if not poke_data: return
+
+    cores_hex = []
+    for i in range(1, 5):
+        val_txt = document.querySelector(f"#hex{i}").value.strip()
+        if val_txt and val_txt.startswith('#'):
+            cores_hex.append(val_txt)
+        else:
+            cores_hex.append(document.querySelector(f"#c{i}").value)
+
+    # 1. RESOLUÇÃO PADRÃO STORIES: 1080 x 1920 pixels (Vertical)
+    largura_img = 1080
+    altura_img = 1920
+    img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
+    
+    from PIL import ImageDraw, ImageFont
+    draw = ImageDraw.Draw(img_final)
+    
+    try:
+        caminho_fonte = "fonts/VCR_OSD_MONO_1.001.ttf"
+
+        font_titulo = ImageFont.truetype(caminho_fonte, size=46)
+        font_hex = ImageFont.truetype(caminho_fonte, size=24)
+        font_pkmn = ImageFont.truetype(caminho_fonte, size=24)
+    except Exception as e:
+        print(f"Erro ao carregar fonte do diretório, usando a padrão: {e}")
+        font_titulo = ImageFont.load_default()
+        font_hex = ImageFont.load_default()
+        font_pkmn = ImageFont.load_default()
+        
+    # Título principal no topo
+    draw.text((60, 100), "MINHA PALETA POKÉMON", fill="#cbd5e1", font=font_titulo)
+    
+    # MATEMÁTICA DAS COLUNAS (Ajustada para sprites maiores)
+    largura_util = 1080 - 100  # 980px livres (Margens de 50px nas laterais)
+    largura_coluna = 220       # Coluna ligeiramente maior para o sprite de 160px
+    espacamento_coluna = (largura_util - (4 * largura_coluna)) // 3
+    
+    # O DOBRO DO TAMANHO: Pula de 96px para 160px (preserva proporção e foca no mobile)
+    largura_sprite = 160
+    
+    for idx_coluna, cor_hex in enumerate(cores_hex):
+        cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
+        
+        # Posição X da coluna
+        x_coluna = 50 + idx_coluna * (largura_coluna + espacamento_coluna)
+        
+        # 1. DESENHA OS BLOCOS DE CORES NO TOPO
+        x_rect_start = x_coluna + (largura_coluna // 2) - 80
+        x_rect_end = x_rect_start + 160
+        draw.rounded_rectangle(
+            [x_rect_start, 220, x_rect_end, 340], 
+            radius=14, 
+            fill=cor_hex
+        )
+        
+        box_h = draw.textbbox((0, 0), cor_hex.upper(), font=font_hex)
+        w_h = box_h[2] - box_h[0]
+        x_text_hex = x_coluna + (largura_coluna // 2) - (w_h // 2)
+        draw.text((x_text_hex, 355), cor_hex.upper(), fill="#94a3b8", font=font_hex)
+        
+        # Busca os candidatos próximos
+        candidatos = sorted(poke_data, key=lambda p: color_distance(cor_lab, p["color"]))
+        ids_usados = set()
+        top5 = []  # ALTERADO: Limite para 5 Pokémon
+        for p in candidatos:
+            if p["id_base"] not in ids_usados:
+                ids_usados.add(p["id_base"])
+                top5.append(p)
+            if len(top5) == 5: break
+            
+        # 2. DESENHA OS 5 POKÉMON EMPILHADOS
+        y_pokemon_start = 450      # Ponto de partida vertical
+        espacamento_vertical = 270  # Mais espaço vertical para acomodar o sprite gigante + texto
+        
+        for idx_pkmn, pkmn in enumerate(top5):
+            try:
+                response = requests.get(pkmn['sprite'])
+                if response.status_code == 200:
+                    sprite_img = Image.open(BytesIO(response.content)).convert("RGBA")
+                    sprite_img = sprite_img.resize((largura_sprite, largura_sprite), Image.NEAREST)
+                    
+                    # Centraliza o sprite de 160px perfeitamente na coluna
+                    x_sprite = x_coluna + (largura_coluna // 2) - (largura_sprite // 2)
+                    y_sprite = y_pokemon_start + (idx_pkmn * espacamento_vertical)
+                    
+                    img_final.paste(sprite_img, (x_sprite, y_sprite), sprite_img)
+                    
+                    nome_completo = pkmn['name'].capitalize()
+                    
+                    # Lógica de quebra de linha ajustada com a variável corrigida (y_sprite)
+                    if " " in nome_completo:
+                        partes = nome_completo.split(" ", 1)
+                        linha1 = partes[0]
+                        linha2 = partes[1]
+                        
+                        box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
+                        w1 = box1[2] - box1[0]
+                        x_l1 = x_coluna + (largura_coluna // 2) - (w1 // 2)
+                        draw.text((x_l1, y_sprite + 155), linha1, fill="#FFFFF0", font=font_pkmn)
+                        
+                        box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
+                        w2 = box2[2] - box2[0]
+                        x_l2 = x_coluna + (largura_coluna // 2) - (w2 // 2)
+                        draw.text((x_l2, y_sprite + 178), linha2, fill="#94a3b8", font=font_pkmn)
+                    
+                    else:
+                        text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
+                        largura_texto = text_box[2] - text_box[0]
+                        x_texto = x_coluna + (largura_coluna // 2) - (largura_texto // 2)
+                        draw.text((x_texto, y_sprite + 155), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                        
+            except Exception as e:
+                print(f"Erro ao desenhar coluna {idx_coluna} no Pokémon {pkmn['name']}: {e}")
+
+    # Fluxo de exportação (Web / iOS)
+    try:
+        buffered = BytesIO()
+        img_final.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        data_url = f"data:image/png;base64,{img_str}"
+
+        from js import window
+        is_ios = "iPhone" in window.navigator.userAgent or "iPad" in window.navigator.userAgent
+
+        if is_ios:
+            nova_aba = window.open("", "_blank")
+            if nova_aba:
+                nova_aba.document.write(f"""
+                    <html>
+                    <head>
+                        <title>Salvar Paleta Stories</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                            body {{ background: #1b1b1b; color: #cbd5e1; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
+                            img {{ max-width: 100%; max-height: 85vh; height: auto; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.6); margin-bottom: 15px; }}
+                            p {{ font-size: 14px; letter-spacing: 0.05em; }}
+                        </style>
+                    </head>
+                    <body>
+                        <img src="{data_url}" alt="Sua Paleta Pokémon 9:16">
+                        <p>👆 Pressione e segure na imagem para "Adicionar às Fotos" e postar nos Stories! 📸</p>
+                    </body>
+                    </html>
+                """)
+                nova_aba.document.close()
+        else:
+            a = document.createElement("a")
+            a.href = data_url
+            a.download = "minha-paleta-pokemon-stories.png"
+            a.click()
+
+    except Exception as e:
+        print("Erro ao processar download da imagem vertical:", e)
+
+document.querySelector("#btn-exportar").addEventListener("click", create_proxy(exportar_paleta_imagem))    
+document.querySelector("#btn-stories").addEventListener("click", create_proxy(exportar_paleta_stories))       
 
 asyncio.ensure_future(carregar_dados_iniciais())
 

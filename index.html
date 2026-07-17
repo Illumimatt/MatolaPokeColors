@@ -162,33 +162,37 @@
             max-width: 550px;
             margin-top: 30px;
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Empilha um embaixo do outro */
             gap: 12px;
         }
 
         .btn {
-            width: 100%;
+            width: 100%; /* Todos ocupam 100% da largura do container de forma igual */
             padding: 14px;
             color: #FFFFF0;
             font-size: 0.95rem;
             font-weight: 600;
             border: none;
-            border-radius: 6px;
+            border-radius: 6px; /* Deixa todos com o mesmo cantinho arredondamento */
             cursor: pointer;
             box-shadow: var(--shadow-sm);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            box-sizing: border-box;
         }
-        .btn:hover { transform: scale(1.02); }
-        .btn:active { transform: scale(0.98); }
+        .btn:hover { transform: scale(1.01); }
+        .btn:active { transform: scale(0.99); }
 
         #btn-exportar { background-color: var(--btn-export); color: #020618; }
         #btn-exportar:hover { background-color: #059669; }
 
-        #btn-aleatorio { background-color: var(--btn-random); }
-        #btn-aleatorio:hover { background-color: #5b1cb3; }
+        #btn-stories { background-color: var(--btn-random); color: #FFFFF0; }
+        #btn-stories:hover { background-color: #5b1cb3; }
+
+        #btn-aleatorio { background-color: #1e293b; border: 1px solid var(--border); color: #FFFFF0; }
+        #btn-aleatorio:hover { background-color: #334155; }
 
         /* --- Media Query para Telas Maiores (Desktop) --- */
         @media (min-width: 768px) {
@@ -258,13 +262,14 @@
 
     <div id="output-container"></div>
 
-    <!-- Nova div contendo os botões reposicionados abaixo do output -->
     <div class="bottom-actions">
-        <button id="btn-exportar" class="btn">📸 Gerar e Baixar Imagem da Paleta</button>
+        <button id="btn-exportar" class="btn">🖥️ Baixar Imagem Horizontal</button>
+        <button id="btn-stories" class="btn">📱Baixar Imagem para Stories</button>
         <button id="btn-aleatorio" class="btn">🎲 Paleta Aleatória</button>
     </div>
 
-    <script type="py" src="./app.py" config='{"packages": ["requests", "numpy", "matplotlib", "pillow"]}' async></script>
-
+<script type="py" src="./app.py" 
+        config='{"packages": ["requests", "numpy", "matplotlib", "pillow"], "fetch": [{"files": ["fonts/VCR_OSD_MONO_1.001.ttf"]}]}' 
+        async></script>
 </body>
 </html>
