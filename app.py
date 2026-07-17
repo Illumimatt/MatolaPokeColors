@@ -1,6 +1,10 @@
+from PIL import Image
+from io import BytesIO
+import base64
 import math
 import random
 import asyncio
+import requests
 from pyodide.http import pyfetch
 from pyodide.ffi import create_proxy
 from pyscript import document
@@ -115,7 +119,23 @@ def gerar_paleta(event):
         color_box.style.height = "60px"
         color_box.style.backgroundColor = cor_hex
         color_box.style.borderRadius = "8px"
-        row.appendChild(color_box)
+        
+        color_container = document.createElement("div")
+        color_container.style.display = "flex"
+        color_container.style.flexDirection = "column"
+        color_container.style.alignItems = "center"
+        color_container.style.gap = "6px"
+        
+        color_text = document.createElement("span")
+        color_text.innerText = cor_hex.upper()
+        color_text.style.fontSize = "12px"
+        color_text.style.fontWeight = "600"
+        color_text.style.color = "#cbd5e1" 
+
+        color_container.appendChild(color_box)
+        color_container.appendChild(color_text)
+        
+        row.appendChild(color_container)
         
         candidatos = sorted(poke_data, key=lambda p: color_distance(cor_lab, p["color"]))
         top7 = []
@@ -179,6 +199,114 @@ async def carregar_dados_iniciais():
         
     except Exception as e:
         print("Erro ao carregar o JSON inicial:", e)
+
+def exportar_paleta_imagem(event):
+    global poke_data
+    if not poke_data: return
+
+    cores_hex = []
+    for i in range(1, 5):
+        val_txt = document.querySelector(f"#hex{i}").value.strip()
+        if val_txt and val_txt.startswith('#'):
+            cores_hex.append(val_txt)
+        else:
+            cores_hex.append(document.querySelector(f"#c{i}").value)
+
+    largura_img = 1100
+    altura_img = 620 # Aumentamos um pouquinho a altura para acomodar a segunda linha de texto
+    img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
+    
+    from PIL import ImageDraw, ImageFont
+    draw = ImageDraw.Draw(img_final)
+    
+    try:
+        font_hex = ImageFont.load_default(size=16)
+        font_pkmn = ImageFont.load_default(size=11)
+    except:
+        font_hex = ImageFont.load_default()
+        font_pkmn = ImageFont.load_default()
+    
+    y_offset = 40
+    espacamento_linhas = 140 # Aumentamos o espaçamento vertical entre os cards por conta da quebra de linha
+
+    for cor_hex in cores_hex:
+        cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
+        
+        draw.rounded_rectangle(
+            [40, y_offset, 110, y_offset + 70], 
+            radius=8, 
+            fill=cor_hex
+        )
+        draw.text((42, y_offset + 80), cor_hex.upper(), fill="#cbd5e1", font=font_hex)
+        
+        candidatos = sorted(poke_data, key=lambda p: color_distance(cor_lab, p["color"]))
+        ids_usados = set()
+        top7 = []
+        for p in candidatos:
+            if p["id_base"] not in ids_usados:
+                ids_usados.add(p["id_base"])
+                top7.append(p)
+            if len(top7) == 7: break
+            
+        x_offset = 160
+        largura_sprite = 96
+
+        for pkmn in top7:
+            try:
+                response = requests.get(pkmn['sprite'])
+                if response.status_code == 200:
+                    sprite_img = Image.open(BytesIO(response.content)).convert("RGBA")
+                    sprite_img = sprite_img.resize((largura_sprite, largura_sprite), Image.NEAREST)
+                    img_final.paste(sprite_img, (x_offset, y_offset), sprite_img)
+                    
+                    nome_completo = pkmn['name'].capitalize()
+                    
+                    # LOGICA DE QUEBRA DE LINHA:
+                    # Se houver um espaço no nome (ex: "Basculin blue"), separamos em duas linhas
+                    if " " in nome_completo:
+                        partes = nome_completo.split(" ", 1)
+                        linha1 = partes[0]
+                        linha2 = partes[1]
+                        
+                        # Centraliza e desenha a primeira linha (Nome principal)
+                        box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
+                        w1 = box1[2] - box1[0]
+                        x_l1 = x_offset + (largura_sprite // 2) - (w1 // 2)
+                        draw.text((x_l1, y_offset + 95), linha1, fill="#FFFFF0", font=font_pkmn)
+                        
+                        # Centraliza e desenha a segunda linha (Variação/Forma) logo abaixo
+                        box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
+                        w2 = box2[2] - box2[0]
+                        x_l2 = x_offset + (largura_sprite // 2) - (w2 // 2)
+                        draw.text((x_l2, y_offset + 110), linha2, fill="#94a3b8", font=font_pkmn) # Tom cinza discreto para o "subtítulo"
+                    
+                    else:
+                        # Se não tiver espaço, desenha em linha única normalmente
+                        text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
+                        largura_texto = text_box[2] - text_box[0]
+                        x_texto = x_offset + (largura_sprite // 2) - (largura_texto // 2)
+                        draw.text((x_texto, y_offset + 95), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                    
+            except Exception as e:
+                print(f"Erro ao processar {pkmn['name']} na imagem: {e}")
+            
+            x_offset += 130 
+            
+        y_offset += espacamento_linhas
+
+    try:
+        buffered = BytesIO()
+        img_final.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+
+        a = document.createElement("a")
+        a.href = f"data:image/png;base64,{img_str}"
+        a.download = "minha-paleta-pokemon.png"
+        a.click()
+    except Exception as e:
+        print("Erro ao processar download da imagem:", e)
+
+document.querySelector("#btn-exportar").addEventListener("click", create_proxy(exportar_paleta_imagem))        
 
 asyncio.ensure_future(carregar_dados_iniciais())
 

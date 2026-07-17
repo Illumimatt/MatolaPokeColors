@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paleta Pokémon Delta E</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -20,6 +21,7 @@
             --primary: #dedede;
             --accent: #2e2e2e;
             --btn-random: #7628dd;
+            --btn-export: #10b981; /* Verde moderno para o botão de exportar */
             --radius: 0.625rem;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
             --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.4);
@@ -29,14 +31,14 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Outfit', sans-serif;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             transition: all 0.2s ease-in-out;
         }
 
         body {
             background-color: var(--background);
             color: var(--foreground);
-            padding: 40px 20px;
+            padding: 30px 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -44,7 +46,7 @@
         }
 
         h1 {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 700;
             color: var(--primary);
             margin-bottom: 8px;
@@ -53,9 +55,9 @@
         }
 
         .subtitle {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #62748e;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             text-align: center;
         }
 
@@ -68,20 +70,22 @@
             max-width: 550px;
             box-shadow: var(--shadow-md);
             margin-bottom: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .color-row {
             display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 8px;
             align-items: center;
         }
 
         input[type="color"] {
             -webkit-appearance: none;
             border: 1px solid var(--border);
-            width: 46px;
-            height: 40px;
+            width: 40px;
+            height: 38px;
             border-radius: 6px;
             cursor: pointer;
             background: none;
@@ -91,14 +95,15 @@
 
         input[type="text"] {
             flex: 1;
-            padding: 10px 16px;
-            font-size: 0.95rem;
+            padding: 8px 12px;
+            font-size: 0.9rem;
             background-color: var(--input-bg);
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--primary);
             font-weight: 500;
             outline: none;
+            width: 100%;
         }
         input[type="text"]:focus {
             border-color: #90a1b9;
@@ -106,30 +111,17 @@
             background-color: var(--card);
         }
 
-        button {
+        #output-container {
             width: 100%;
-            padding: 12px;
-            background-color: var(--btn-random);
-            color: #FFFFF0;
-            font-size: 0.95rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 8px;
-            box-shadow: var(--shadow-sm);
-        }
-        button:hover {
-            background-color: #7628dd;
-            transform: scale(1.02);
-        }
-        button:active {
-            transform: scale(0.98);
+            max-width: 550px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
 
         #output-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 940px;
             display: flex;
             flex-direction: column;
             gap: 24px;
@@ -142,15 +134,18 @@
             padding: 16px;
             box-shadow: var(--shadow-sm);
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: row;
+            align-items: center;
             justify-content: flex-start;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 0;
+            flex-wrap: wrap;
         }
 
         #output-container .color-box-preview {
             border: 1px solid rgba(0,0,0,0.05);
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+            flex-shrink: 0;
         }
 
         #output-container span {
@@ -158,13 +153,78 @@
             color: #FFFFF0 !important;
             text-transform: capitalize;
             letter-spacing: -0.01em;
+
+        }
+
+        /* --- Seção de Ações Inferiores --- */
+        .bottom-actions {
+            width: 100%;
+            max-width: 550px;
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            color: #FFFFF0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:hover { transform: scale(1.02); }
+        .btn:active { transform: scale(0.98); }
+
+        #btn-exportar { background-color: var(--btn-export); color: #020618; }
+        #btn-exportar:hover { background-color: #059669; }
+
+        #btn-aleatorio { background-color: var(--btn-random); }
+        #btn-aleatorio:hover { background-color: #5b1cb3; }
+
+        /* --- Media Query para Telas Maiores (Desktop) --- */
+        @media (min-width: 768px) {
+            body { padding: 40px 20px; }
+            h1 { font-size: 2.2rem; }
+            .controls { grid-template-columns: repeat(4, 1fr); padding: 30px; } /* 4 colunas perfeitas */
+            
+            /* Restaura o layout horizontal perfeito no desktop */
+            #output-container .color-row {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 25px;
+            }
+            #output-container .color-row > div:first-child {
+                grid-column: auto;
+                width: 96px !important;
+                height: 96px !important;
+            }
+            #output-container span { font-size: 11px; }
         }
     </style>
 </head>
 <body>
 
     <h1>Gerador de Paleta Pokémon</h1>
-    <p class="subtitle">Insira suas cores ou aleatorize para encontrar seus Pokémon ideais</p>
+    <p class="subtitle">
+        Insira as suas cores do 
+        <a href="https://pantonecolors.net/pantone-birth-chart/" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           style="color: #7628dd; text-decoration: underline; font-weight: 600;">
+           Pantone Birth Chart
+        </a> 
+        para encontrar seus Pokémon ideais
+    </p>
 
     <div class="controls">
         <div class="color-row">
@@ -183,10 +243,15 @@
             <input type="color" id="c4" value="#9C8CD6">
             <input type="text" id="hex4" placeholder="#9C8CD6" maxlength="7">
         </div>
-        <button id="btn-aleatorio">🎲 Paleta Aleatória</button>
     </div>
 
     <div id="output-container"></div>
+
+    <!-- Nova div contendo os botões reposicionados abaixo do output -->
+    <div class="bottom-actions">
+        <button id="btn-exportar" class="btn">📸 Gerar e Baixar Imagem da Paleta</button>
+        <button id="btn-aleatorio" class="btn">🎲 Paleta Aleatória</button>
+    </div>
 
     <script type="py" src="./app.py" config='{"packages": ["requests", "numpy", "matplotlib", "pillow"]}' async></script>
 
