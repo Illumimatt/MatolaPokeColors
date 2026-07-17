@@ -1,5 +1,6 @@
 from PIL import Image
 from io import BytesIO
+from js import window, document
 import base64
 import math
 import random
@@ -298,11 +299,44 @@ def exportar_paleta_imagem(event):
         buffered = BytesIO()
         img_final.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
+        data_url = f"data:image/png;base64,{img_str}"
 
-        a = document.createElement("a")
-        a.href = f"data:image/png;base64,{img_str}"
-        a.download = "minha-paleta-pokemon.png"
-        a.click()
+        # Detecta se o usuário está em um dispositivo iOS (iPhone/iPad)
+        is_ios = "iPhone" in window.navigator.userAgent or "iPad" in window.navigator.userAgent
+
+        if is_ios:
+            # No iOS, abrimos a imagem em uma nova aba para o usuário salvar nativamente
+            nova_aba = window.open("", "_blank")
+            if nova_aba:
+                # Injeta um HTML limpo com a imagem ocupando a tela e a instrução de salvar
+                nova_aba.document.write(f"""
+                    <html>
+                    <head>
+                        <title>Salvar Paleta</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                            body {{ background: #1b1b1b; color: #cbd5e1; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
+                            img {{ max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 20px; }}
+                            p {{ font-size: 14px; letter-spacing: 0.05em; }}
+                        </style>
+                    </head>
+                    <body>
+                        <img src="{data_url}" alt="Sua Paleta Pokémon">
+                        <p>👆 Pressione e segure na imagem para "Adicionar às Fotos" 📸</p>
+                    </body>
+                    </html>
+                """)
+                nova_aba.document.close()
+            else:
+                # Caso o bloqueador de pop-ups do Safari impeça o window.open
+                print("Por favor, permita pop-ups para visualizar e salvar sua imagem.")
+        else:
+            # Comportamento normal de download direto para Desktop e Android
+            a = document.createElement("a")
+            a.href = data_url
+            a.download = "minha-paleta-pokemon.png"
+            a.click()
+
     except Exception as e:
         print("Erro ao processar download da imagem:", e)
 
