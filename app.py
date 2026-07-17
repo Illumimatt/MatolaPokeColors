@@ -191,7 +191,7 @@ def gerar_paleta_aleatoria(event):
 
 async def carregar_dados_iniciais():
     global poke_data
-    GIST_URL = "https://gist.githubusercontent.com/Illumimatt/d5dfddb18337f4e365ef688826c57206/raw/934816b3310b73ecc5ebe870af0fb7a73aa7ec05/gistfile1.txt"
+    GIST_URL = "https://gist.githubusercontent.com/Illumimatt/52e9a73ee384c4b2eac54c74c2f9d37c/raw/2007e719a016ae786eec81ae82f2fee613674915/gistfile1.txt"
     try:
         response = await pyfetch(GIST_URL)
         poke_data = await response.json()
