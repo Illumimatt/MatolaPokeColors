@@ -11,6 +11,7 @@ from pyodide.ffi import create_proxy
 from pyscript import document
 
 # --- VARIÁVEL GLOBAL PARA GUARDAR OS DADOS ---
+SPRITE_CACHE = {}
 poke_data = []
 
 def rgb_to_lab(r, g, b):
@@ -153,22 +154,30 @@ def gerar_paleta(event):
             pkmn_box.style.alignItems = "center"
             pkmn_box.style.width = "100px"
             
+            id_pokemon = pkmn['id_base']
+            sufixo = "_shiny" if "(Shiny)" in pkmn['name'] else ""
+            caminho_local = f"./sprites/{id_pokemon}{sufixo}.png"
+            
             img = document.createElement("img")
-            img.src = pkmn['sprite']
+            img.src = caminho_local
+            
             img.style.width = "96px"
             img.style.height = "96px"
             img.style.cursor = "pointer"
             img.style.imageRendering = "pixelated"
             img.title = f"{pkmn['name']} (Click para salvar)"
+            
             img.onmouseover = lambda e: setattr(e.target.style, "transform", "scale(2.0)")
             img.onmouseout = lambda e: setattr(e.target.style, "transform", "scale(1.0)")
             
+            nome_limpo = pkmn['name'].replace(" (Shiny)", "").capitalize()
+            
             name_tag = document.createElement("span")
-            name_tag.innerText = pkmn['name'].capitalize()
+            name_tag.innerText = nome_limpo
             name_tag.style.fontSize = "11px"
             name_tag.style.marginTop = "2px"
             name_tag.style.textAlign = "center"
-            name_tag.style.color = "#333"
+            name_tag.style.color = "#cbd5e1" 
             name_tag.style.fontFamily = "sans-serif"
             
             pkmn_box.appendChild(img)
@@ -191,9 +200,10 @@ def gerar_paleta_aleatoria(event):
 
 async def carregar_dados_iniciais():
     global poke_data
-    GIST_URL = "https://gist.githubusercontent.com/Illumimatt/52e9a73ee384c4b2eac54c74c2f9d37c/raw/2007e719a016ae786eec81ae82f2fee613674915/gistfile1.txt"
+    ARQUIVO_JSON = "./pokemon_colors_simple.json"
+    
     try:
-        response = await pyfetch(GIST_URL)
+        response = await pyfetch(ARQUIVO_JSON)
         poke_data = await response.json()
         
         gerar_paleta(None)
@@ -255,46 +265,67 @@ def exportar_paleta_imagem(event):
         x_offset = 160
         largura_sprite = 96
 
+        href_atual = window.location.href.split('?')[0].split('#')[0]
+        base_url = href_atual.rsplit('/', 1)[0] if href_atual.endswith('.html') else href_atual.rstrip('/')
+
         for pkmn in top7:
             try:
-                response = requests.get(pkmn['sprite'])
-                if response.status_code == 200:
-                    sprite_img = Image.open(BytesIO(response.content)).convert("RGBA")
-                    sprite_img = sprite_img.resize((largura_sprite, largura_sprite), Image.NEAREST)
-                    img_final.paste(sprite_img, (x_offset, y_offset), sprite_img)
-                    
-                    nome_completo = pkmn['name'].capitalize()
-                    
-                    # LOGICA DE QUEBRA DE LINHA:
-                    # Se houver um espaço no nome (ex: "Basculin blue"), separamos em duas linhas
-                    if " " in nome_completo:
-                        partes = nome_completo.split(" ", 1)
-                        linha1 = partes[0]
-                        linha2 = partes[1]
-                        
-                        # Centraliza e desenha a primeira linha (Nome principal)
-                        box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
-                        w1 = box1[2] - box1[0]
-                        x_l1 = x_offset + (largura_sprite // 2) - (w1 // 2)
-                        draw.text((x_l1, y_offset + 95), linha1, fill="#FFFFF0", font=font_pkmn)
-                        
-                        # Centraliza e desenha a segunda linha (Variação/Forma) logo abaixo
-                        box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
-                        w2 = box2[2] - box2[0]
-                        x_l2 = x_offset + (largura_sprite // 2) - (w2 // 2)
-                        draw.text((x_l2, y_offset + 110), linha2, fill="#94a3b8", font=font_pkmn) # Tom cinza discreto para o "subtítulo"
-                    
+                # 1. Identifica o ID e se é Shiny
+                id_pokemon = pkmn['id_base']
+                sufixo = "_shiny" if "(Shiny)" in pkmn['name'] else ""
+                
+                # 2. Monta a URL COMPLETA (ex: https://seu-usuario.github.io/repo/sprites/1.png)
+                url_sprite_local = f"{base_url}/sprites/{id_pokemon}{sufixo}.png"
+                
+                # 3. Sistema de Cache
+                if url_sprite_local not in SPRITE_CACHE:
+                    response = requests.get(url_sprite_local, timeout=5)
+                    if response.status_code == 200:
+                        SPRITE_CACHE[url_sprite_local] = response.content
                     else:
-                        # Se não tiver espaço, desenha em linha única normalmente
-                        text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
-                        largura_texto = text_box[2] - text_box[0]
-                        x_texto = x_offset + (largura_sprite // 2) - (largura_texto // 2)
-                        draw.text((x_texto, y_offset + 95), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                        print(f"Sprite não encontrado: {url_sprite_local}")
+                        x_offset += 130  # Ajuste crucial: avança o espaço em branco se a imagem falhar
+                        continue
+                
+                # 4. Carrega a imagem direto da memória
+                sprite_bytes = SPRITE_CACHE[url_sprite_local]
+                sprite_img = Image.open(BytesIO(sprite_bytes)).convert("RGBA")
+                sprite_img = sprite_img.resize((largura_sprite, largura_sprite), Image.NEAREST)
+                
+                img_final.paste(sprite_img, (x_offset, y_offset), sprite_img)
+                
+                # Opcional: Remove a tag (Shiny) do texto para a imagem ficar mais limpa
+                nome_completo = pkmn['name'].replace(" (Shiny)", "").capitalize()
+                
+                # LOGICA DE QUEBRA DE LINHA:
+                if " " in nome_completo:
+                    partes = nome_completo.split(" ", 1)
+                    linha1 = partes[0]
+                    linha2 = partes[1]
+                    
+                    # Centraliza e desenha a primeira linha
+                    box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
+                    w1 = box1[2] - box1[0]
+                    x_l1 = x_offset + (largura_sprite // 2) - (w1 // 2)
+                    draw.text((x_l1, y_offset + 95), linha1, fill="#FFFFF0", font=font_pkmn)
+                    
+                    # Centraliza e desenha a segunda linha
+                    box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
+                    w2 = box2[2] - box2[0]
+                    x_l2 = x_offset + (largura_sprite // 2) - (w2 // 2)
+                    draw.text((x_l2, y_offset + 110), linha2, fill="#94a3b8", font=font_pkmn)
+                    
+                else:
+                    # Se não tiver espaço, desenha em linha única
+                    text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
+                    largura_texto = text_box[2] - text_box[0]
+                    x_texto = x_offset + (largura_sprite // 2) - (largura_texto // 2)
+                    draw.text((x_texto, y_offset + 95), nome_completo, fill="#FFFFF0", font=font_pkmn)
                     
             except Exception as e:
                 print(f"Erro ao processar {pkmn['name']} na imagem: {e}")
             
-            x_offset += 130 
+            x_offset += 130
             
         y_offset += espacamento_linhas
 
@@ -385,7 +416,7 @@ def exportar_paleta_stories(event):
     
     # O DOBRO DO TAMANHO: Pula de 96px para 160px (preserva proporção e foca no mobile)
     largura_sprite = 160
-    
+
     for idx_coluna, cor_hex in enumerate(cores_hex):
         cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
         
@@ -419,47 +450,66 @@ def exportar_paleta_stories(event):
         # 2. DESENHA OS 5 POKÉMON EMPILHADOS
         y_pokemon_start = 450      # Ponto de partida vertical
         espacamento_vertical = 270  # Mais espaço vertical para acomodar o sprite gigante + texto
+
+        href_atual = window.location.href.split('?')[0].split('#')[0]
+        base_url = href_atual.rsplit('/', 1)[0] if href_atual.endswith('.html') else href_atual.rstrip('/')
         
         for idx_pkmn, pkmn in enumerate(top5):
             try:
-                response = requests.get(pkmn['sprite'])
-                if response.status_code == 200:
-                    sprite_img = Image.open(BytesIO(response.content)).convert("RGBA")
-                    sprite_img = sprite_img.resize((largura_sprite, largura_sprite), Image.NEAREST)
-                    
-                    # Centraliza o sprite de 160px perfeitamente na coluna
-                    x_sprite = x_coluna + (largura_coluna // 2) - (largura_sprite // 2)
-                    y_sprite = y_pokemon_start + (idx_pkmn * espacamento_vertical)
-                    
-                    img_final.paste(sprite_img, (x_sprite, y_sprite), sprite_img)
-                    
-                    nome_completo = pkmn['name'].capitalize()
-                    
-                    # Lógica de quebra de linha ajustada com a variável corrigida (y_sprite)
-                    if " " in nome_completo:
-                        partes = nome_completo.split(" ", 1)
-                        linha1 = partes[0]
-                        linha2 = partes[1]
-                        
-                        box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
-                        w1 = box1[2] - box1[0]
-                        x_l1 = x_coluna + (largura_coluna // 2) - (w1 // 2)
-                        draw.text((x_l1, y_sprite + 155), linha1, fill="#FFFFF0", font=font_pkmn)
-                        
-                        box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
-                        w2 = box2[2] - box2[0]
-                        x_l2 = x_coluna + (largura_coluna // 2) - (w2 // 2)
-                        draw.text((x_l2, y_sprite + 178), linha2, fill="#94a3b8", font=font_pkmn)
-                    
+                # 1. Identifica o ID e se é Shiny
+                id_pokemon = pkmn['id_base']
+                sufixo = "_shiny" if "(Shiny)" in pkmn['name'] else ""
+                
+                # 2. Monta a URL COMPLETA
+                url_sprite_local = f"{base_url}/sprites/{id_pokemon}{sufixo}.png"
+                
+                # 3. Sistema de Cache
+                if url_sprite_local not in SPRITE_CACHE:
+                    response = requests.get(url_sprite_local, timeout=5)
+                    if response.status_code == 200:
+                        SPRITE_CACHE[url_sprite_local] = response.content
                     else:
-                        text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
-                        largura_texto = text_box[2] - text_box[0]
-                        x_texto = x_coluna + (largura_coluna // 2) - (largura_texto // 2)
-                        draw.text((x_texto, y_sprite + 155), nome_completo, fill="#FFFFF0", font=font_pkmn)
-                        
+                        print(f"Sprite não encontrado: {url_sprite_local}")
+                        continue
+                
+                # 4. Carrega a imagem direto da memória
+                sprite_bytes = SPRITE_CACHE[url_sprite_local]
+                sprite_img = Image.open(BytesIO(sprite_bytes)).convert("RGBA")
+                sprite_img = sprite_img.resize((largura_sprite, largura_sprite), Image.NEAREST)
+                
+                # Centraliza o sprite de 160px perfeitamente na coluna
+                x_sprite = x_coluna + (largura_coluna // 2) - (largura_sprite // 2)
+                y_sprite = y_pokemon_start + (idx_pkmn * espacamento_vertical)
+                
+                img_final.paste(sprite_img, (x_sprite, y_sprite), sprite_img)
+                
+                # Remove a tag (Shiny) do texto para a imagem ficar mais limpa
+                nome_completo = pkmn['name'].replace(" (Shiny)", "").capitalize()
+                
+                # Lógica de quebra de linha ajustada com a variável corrigida (y_sprite)
+                if " " in nome_completo:
+                    partes = nome_completo.split(" ", 1)
+                    linha1 = partes[0]
+                    linha2 = partes[1]
+                    
+                    box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
+                    w1 = box1[2] - box1[0]
+                    x_l1 = x_coluna + (largura_coluna // 2) - (w1 // 2)
+                    draw.text((x_l1, y_sprite + 155), linha1, fill="#FFFFF0", font=font_pkmn)
+                    
+                    box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
+                    w2 = box2[2] - box2[0]
+                    x_l2 = x_coluna + (largura_coluna // 2) - (w2 // 2)
+                    draw.text((x_l2, y_sprite + 178), linha2, fill="#94a3b8", font=font_pkmn)
+                
+                else:
+                    text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
+                    largura_texto = text_box[2] - text_box[0]
+                    x_texto = x_coluna + (largura_coluna // 2) - (largura_texto // 2)
+                    draw.text((x_texto, y_sprite + 155), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                    
             except Exception as e:
                 print(f"Erro ao desenhar coluna {idx_coluna} no Pokémon {pkmn['name']}: {e}")
-
     # Fluxo de exportação (Web / iOS)
     try:
         buffered = BytesIO()
@@ -467,7 +517,6 @@ def exportar_paleta_stories(event):
         img_str = base64.b64encode(buffered.getvalue()).decode()
         data_url = f"data:image/png;base64,{img_str}"
 
-        from js import window
         is_ios = "iPhone" in window.navigator.userAgent or "iPad" in window.navigator.userAgent
 
         if is_ios:
@@ -500,9 +549,7 @@ def exportar_paleta_stories(event):
     except Exception as e:
         print("Erro ao processar download da imagem vertical:", e)
 
+asyncio.ensure_future(carregar_dados_iniciais())
 document.querySelector("#btn-exportar").addEventListener("click", create_proxy(exportar_paleta_imagem))    
 document.querySelector("#btn-stories").addEventListener("click", create_proxy(exportar_paleta_stories))       
-
-asyncio.ensure_future(carregar_dados_iniciais())
-
 document.querySelector("#btn-aleatorio").addEventListener("click", create_proxy(gerar_paleta_aleatoria))
