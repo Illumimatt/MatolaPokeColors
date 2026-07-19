@@ -92,6 +92,8 @@ def aplicar_filtros_avancados():
     chk_shiny_only = document.getElementById("chk-apenas-shiny").checked
     chk_no_shiny = document.getElementById("chk-sem-shiny").checked
     
+    chk_estagio_1 = document.getElementById("chk-estagio-1").checked
+    chk_estagio_2 = document.getElementById("chk-estagio-2").checked
     chk_estagio_final = document.getElementById("chk-estagio-final").checked
     chk_megas = document.getElementById("chk-megas").checked
     chk_lendarios_miticos = document.getElementById("chk-lendarios-miticos").checked
@@ -110,6 +112,8 @@ def aplicar_filtros_avancados():
         if chk_no_shiny and is_shiny: continue
         
         # Filtros de Biologia
+        if chk_estagio_1 and p.get("evolution_stage") != 1: continue
+        if chk_estagio_2 and not (p.get("evolution_stage") == 2 and not p.get("is_fully_evolved", False)): continue
         if chk_estagio_final and not p.get("is_fully_evolved", False): continue
         if chk_megas and not p.get("is_mega", False): continue
         if chk_lendarios_miticos and not (p.get("is_legendary", False) or p.get("is_mythical", False)): continue
