@@ -86,6 +86,49 @@ for i in range(1, 5):
     document.querySelector(f"#hex{i}").addEventListener("input", create_proxy(handle_hex_input))
     document.querySelector(f"#c{i}").addEventListener("input", create_proxy(sync_hex_from_picker))
 
+def aplicar_filtros_avancados():
+    # 1. Lê os checkboxes de regras únicas
+    chk_repetidos = document.getElementById("chk-repetidos").checked
+    chk_shiny_only = document.getElementById("chk-apenas-shiny").checked
+    chk_no_shiny = document.getElementById("chk-sem-shiny").checked
+    
+    chk_estagio_final = document.getElementById("chk-estagio-final").checked
+    chk_megas = document.getElementById("chk-megas").checked
+    chk_lendarios_miticos = document.getElementById("chk-lendarios-miticos").checked
+
+    # 2. Lê as listas de checkboxes (Gerações, Tipos, Habitats)
+    gens_selecionadas = [el.value for el in document.querySelectorAll(".chk-gen") if el.checked]
+    tipos_selecionados = [el.value for el in document.querySelectorAll(".chk-type") if el.checked]
+    habitats_selecionados = [el.value for el in document.querySelectorAll(".chk-habitat") if el.checked]
+
+    dados_filtrados = []
+    
+    for p in poke_data:
+        # Filtros de Shiny
+        is_shiny = "(Shiny)" in p["name"]
+        if chk_shiny_only and not is_shiny: continue
+        if chk_no_shiny and is_shiny: continue
+        
+        # Filtros de Biologia
+        if chk_estagio_final and not p.get("is_fully_evolved", False): continue
+        if chk_megas and not p.get("is_mega", False): continue
+        if chk_lendarios_miticos and not (p.get("is_legendary", False) or p.get("is_mythical", False)): continue
+        
+        # Filtros de Listas (Se o usuário marcou alguma coisa, tem que bater)
+        if gens_selecionadas and p.get("generation") not in gens_selecionadas: continue
+        if habitats_selecionados and p.get("habitat") not in habitats_selecionados: continue
+        
+        # Filtro de Tipo (Checa se ALGUM dos tipos do Pokémon bate com os marcados)
+        if tipos_selecionados:
+            tipos_do_pokemon = p.get("types", [])
+            if not any(t in tipos_selecionados for t in tipos_do_pokemon):
+                continue
+        
+        # Se passou por todas as barreiras, está aprovado!
+        dados_filtrados.append(p)
+        
+    return dados_filtrados, chk_repetidos
+
 # --- FUNÇÃO PRINCIPAL DE GERAR PALETA ---
 def gerar_paleta(event):
     global poke_data
@@ -139,13 +182,20 @@ def gerar_paleta(event):
         
         row.appendChild(color_container)
         
-        candidatos = sorted(poke_data, key=lambda p: color_distance(cor_lab, p["color"]))
+        dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
+
+        candidatos = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))
+        
+        ids_usados = set()
         top7 = []
         for p in candidatos:
-            if p["id_base"] not in ids_usados:
+            if not permite_repetidos:
+                if p["id_base"] in ids_usados:
+                    continue
                 ids_usados.add(p["id_base"])
-                top7.append(p)
-            if len(top7) == 7: break
+                
+            top7.append(p)
+            if len(top7) == 7: break 
         
         for pkmn in top7:
             pkmn_box = document.createElement("div")
@@ -170,7 +220,7 @@ def gerar_paleta(event):
             img.onmouseover = lambda e: setattr(e.target.style, "transform", "scale(2.0)")
             img.onmouseout = lambda e: setattr(e.target.style, "transform", "scale(1.0)")
             
-            nome_limpo = pkmn['name'].replace(" (Shiny)", "").capitalize()
+            nome_limpo = pkmn['name']
             
             name_tag = document.createElement("span")
             name_tag.innerText = nome_limpo
@@ -253,13 +303,19 @@ def exportar_paleta_imagem(event):
         )
         draw.text((42, y_offset + 80), cor_hex.upper(), fill="#cbd5e1", font=font_hex)
         
-        candidatos = sorted(poke_data, key=lambda p: color_distance(cor_lab, p["color"]))
+        dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
+        
+        candidatos = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))
+        
         ids_usados = set()
         top7 = []
         for p in candidatos:
-            if p["id_base"] not in ids_usados:
+            if not permite_repetidos:
+                if p["id_base"] in ids_usados:
+                    continue
                 ids_usados.add(p["id_base"])
-                top7.append(p)
+                
+            top7.append(p)
             if len(top7) == 7: break
             
         x_offset = 160
@@ -294,8 +350,7 @@ def exportar_paleta_imagem(event):
                 
                 img_final.paste(sprite_img, (x_offset, y_offset), sprite_img)
                 
-                # Opcional: Remove a tag (Shiny) do texto para a imagem ficar mais limpa
-                nome_completo = pkmn['name'].replace(" (Shiny)", "").capitalize()
+                nome_completo = pkmn['name']
                 
                 # LOGICA DE QUEBRA DE LINHA:
                 if " " in nome_completo:
@@ -437,15 +492,19 @@ def exportar_paleta_stories(event):
         x_text_hex = x_coluna + (largura_coluna // 2) - (w_h // 2)
         draw.text((x_text_hex, 355), cor_hex.upper(), fill="#94a3b8", font=font_hex)
         
-        # Busca os candidatos próximos
-        candidatos = sorted(poke_data, key=lambda p: color_distance(cor_lab, p["color"]))
+        dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
+
+        candidatos = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))
+        
         ids_usados = set()
-        top5 = []  # ALTERADO: Limite para 5 Pokémon
+        top5 = []
         for p in candidatos:
-            if p["id_base"] not in ids_usados:
-                ids_usados.add(p["id_base"])
-                top5.append(p)
-            if len(top5) == 5: break
+            if not permite_repetidos:
+                if p["id_base"] in ids_usados:
+                    continue
+                ids_usados.add(p["id_base"])           
+            top5.append(p)
+            if len(top5) == 5: break 
             
         # 2. DESENHA OS 5 POKÉMON EMPILHADOS
         y_pokemon_start = 450      # Ponto de partida vertical
@@ -483,8 +542,7 @@ def exportar_paleta_stories(event):
                 
                 img_final.paste(sprite_img, (x_sprite, y_sprite), sprite_img)
                 
-                # Remove a tag (Shiny) do texto para a imagem ficar mais limpa
-                nome_completo = pkmn['name'].replace(" (Shiny)", "").capitalize()
+                nome_completo = pkmn['name']
                 
                 # Lógica de quebra de linha ajustada com a variável corrigida (y_sprite)
                 if " " in nome_completo:
@@ -550,6 +608,7 @@ def exportar_paleta_stories(event):
         print("Erro ao processar download da imagem vertical:", e)
 
 asyncio.ensure_future(carregar_dados_iniciais())
+document.getElementById("btn-fechar-filtros").onclick = gerar_paleta
 document.querySelector("#btn-exportar").addEventListener("click", create_proxy(exportar_paleta_imagem))    
 document.querySelector("#btn-stories").addEventListener("click", create_proxy(exportar_paleta_stories))       
 document.querySelector("#btn-aleatorio").addEventListener("click", create_proxy(gerar_paleta_aleatoria))
