@@ -5,18 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Paleta Pokémon</title>
     
-    <!-- Bibliotecas PyScript e Fontes -->
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
-
-    <!-- Chama o arquivo CSS externo -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <h1>Gerador de Paleta Pokémon</h1>
     
     <p class="subtitle">
@@ -29,7 +25,7 @@
     
     <details class="help-section">
         <summary class="help-summary">
-            ❓ Precisa de ajuda? Veja como pegar as cores
+            Precisa de ajuda? Veja como pegar as cores
         </summary>
         <div class="help-content">
             <p>1. Abra o <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> em uma nova aba.</p>
@@ -60,7 +56,7 @@
 
     <!-- Botão de Filtros -->
     <div class="filter-container">
-        <button id="btn-abrir-filtros" class="btn-filter">⚙️ Filtros de Pokémon</button>
+        <button id="btn-abrir-filtros" class="btn-filter">Filtros de Pokémon</button>
     </div>
 
  <!-- Modal de Filtros -->
@@ -70,71 +66,71 @@
             
             <!-- Grupo 1: Regras da Paleta -->
             <div class="filter-section">
-                <h4>⚙️ Regras do Gerador</h4>
+                <h4>Regras do Gerador</h4>
                 <div class="filter-grid">
                     <label class="checkbox-label" title="Permite que o mesmo Pokémon apareça mais de uma vez">
-                        <input type="checkbox" id="chk-repetidos"> 🔄 Permitir Repetidos
+                        <input type="checkbox" id="chk-repetidos">Permitir Repetidos
                     </label>
                     <label class="checkbox-label">
-                        <input type="checkbox" id="chk-apenas-shiny"> ✨ Apenas Shinies
+                        <input type="checkbox" id="chk-apenas-shiny">Apenas Shinies
                     </label>
                     <label class="checkbox-label">
-                        <input type="checkbox" id="chk-sem-shiny"> 🚫 Ocultar Shinies
+                        <input type="checkbox" id="chk-sem-shiny">Ocultar Shinies
                     </label>
                 </div>
             </div>
 
             <!-- Grupo 2: Raridade e Biologia -->
             <div class="filter-section">
-                <h4>🧬 Biologia e Raridade</h4>
+                <h4>Biologia e Raridade</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-final" value="true"> 💪 Estágio Final</label>
-                    <label class="checkbox-label"><input type="checkbox" id="chk-megas" value="true"> 🌋 Mega Evoluções</label>
-                    <label class="checkbox-label"><input type="checkbox" id="chk-lendarios-miticos" value="true"> 👑 Lendários e Míticos</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-final" value="true">Estágio Final</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-megas" value="true">Mega Evoluções</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-lendarios-miticos" value="true">Lendários e Míticos</label>
                 </div>
             </div>
 
             <!-- Grupo 3: Ecossistema / Habitat -->
             <div class="filter-section">
-                <h4>🌲 Habitat</h4>
+                <h4>Habitat</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="forest"> 🌳 Floresta</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="sea"> 🌊 Mar</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="cave"> 🦇 Caverna</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="mountain"> ⛰️ Montanha</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="urban"> 🏙️ Urbano</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="grassland"> 🌾 Campos</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="forest">Floresta</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="sea">Mar</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="cave">Caverna</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="mountain">Montanha</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="urban">Urbano</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="grassland">Campos</label>
                 </div>
             </div>
 
             <!-- Grupo 4: Gerações -->
             <div class="filter-section">
-                <h4>🗺️ Região / Geração</h4>
+                <h4>Região / Geração</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-i"> 🔴 Kanto</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-ii"> 🟡 Johto</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-iii"> 🟢 Hoenn</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-iv"> 🔵 Sinnoh</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-v"> ⚫ Unova</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-vi"> 💖 Kalos</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-vii"> 🌴 Alola</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-viii"> ⚔️ Galar</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-ix"> 🍇 Paldea</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-i">Kanto</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-ii">Johto</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-iii">Hoenn</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-iv">Sinnoh</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-v">Unova</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-vi">Kalos</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-vii">Alola</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-viii">Galar</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-ix">Paldea</label>
                 </div>
             </div>
 
             <!-- Grupo 5: Tipos -->
             <div class="filter-section" style="margin-bottom: 25px;">
-                <h4>🔥 Tipagem</h4>
+                <h4>Tipos</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fire"> 🔥 Fogo</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="water"> 💧 Água</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="grass"> 🍃 Planta</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="electric"> ⚡ Elétrico</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="psychic"> 🔮 Psíquico</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dark"> 🌑 Sombrio</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fairy"> ✨ Fada</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dragon"> 🐉 Dragão</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fire">Fogo</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="water">Água</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="grass">Planta</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="electric">Elétrico</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="psychic">Psíquico</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dark">Sombrio</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fairy">Fada</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dragon">Dragão</label>
                 </div>
             </div>
             
@@ -146,9 +142,9 @@
     <div id="output-container"></div>
 
     <div class="bottom-actions">
-        <button id="btn-exportar" class="btn">🖥️ Baixar Imagem Horizontal</button>
-        <button id="btn-stories" class="btn">📱Baixar Imagem para Stories</button>
-        <button id="btn-aleatorio" class="btn">🎲 Paleta Aleatória</button>
+        <button id="btn-exportar" class="btn">Baixar Imagem Horizontal</button>
+        <button id="btn-stories" class="btn">Baixar Imagem para Stories</button>
+        <button id="btn-aleatorio" class="btn">Paleta Aleatória</button>
     </div>
 
     <!-- Chama o arquivo JS externo da interface -->

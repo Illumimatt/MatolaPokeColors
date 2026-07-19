@@ -173,7 +173,7 @@ def gerar_paleta(event):
         
         color_text = document.createElement("span")
         color_text.innerText = cor_hex.upper()
-        color_text.style.fontSize = "12px"
+        color_text.style.fontSize = "16px"
         color_text.style.fontWeight = "600"
         color_text.style.color = "#cbd5e1" 
 
@@ -224,11 +224,10 @@ def gerar_paleta(event):
             
             name_tag = document.createElement("span")
             name_tag.innerText = nome_limpo
-            name_tag.style.fontSize = "11px"
+            name_tag.style.fontSize = "16px"
             name_tag.style.marginTop = "2px"
             name_tag.style.textAlign = "center"
             name_tag.style.color = "#cbd5e1" 
-            name_tag.style.fontFamily = "sans-serif"
             
             pkmn_box.appendChild(img)
             pkmn_box.appendChild(name_tag)

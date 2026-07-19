@@ -1,23 +1,38 @@
 :root {
-    --background: #1b1b1b;
-    --foreground: #FFFFF0;
-    --card: #242424;
-    --border: #3a3a3a;
-    --input-bg: #1f1f1f;
-    --primary: #dedede;
-    --accent: #2e2e2e;
-    --btn-random: #7628dd;
-    --btn-export: #10b981;
+    --background: #14141a;
+    --card: #1b1b27;
+    --border: #2d2d43;
+    --input-bg: #252e37;
+    
+    --foreground: #f4f4f6;
+    --muted-foreground: #98a6b3;
+    
+    --primary: #ffd91a;
+    --primary-foreground: #0a0a0a;
+    
+    --btn-random: #7d7d9b;
+    --btn-export: #ffd91a;
+    
     --radius: 0.625rem;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
     --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.4);
+}
+
+@font-face {
+    font-family: 'PixelOperator';
+    src: url('fonts/PixelOperator.ttf') format('truetype'); 
+}
+
+@font-face {
+    font-family: 'VCR';
+    src: url('fonts/VCR_OSD_MONO_1.001.ttf') format('truetype');
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: 'PixelOperator', monospace !important; 
     transition: all 0.2s ease-in-out;
 }
 
@@ -32,7 +47,7 @@ body {
 }
 
 h1 {
-    font-size: 2rem;
+    font-size: 3rem;
     font-weight: 700;
     color: var(--primary);
     margin-bottom: 8px;
@@ -41,14 +56,14 @@ h1 {
 }
 
 .subtitle {
-    font-size: 0.95rem;
-    color: #62748e;
+    font-size: 1.5rem;
+    color: var(--muted-foreground);
     margin-bottom: 30px;
     text-align: center;
 }
 
 .link-destaque {
-    color: #7628dd;
+    color: var(--primary);
     text-decoration: underline;
     font-weight: 600;
 }
@@ -67,7 +82,7 @@ h1 {
 }
 
 .help-summary {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: var(--primary);
     outline: none;
@@ -80,7 +95,7 @@ h1 {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
-    font-size: 0.85rem;
+    font-size: 1rem;
     color: #cbd5e1;
     line-height: 1.5;
 }
@@ -123,7 +138,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
 input[type="text"] {
     flex: 1;
     padding: 8px 12px;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
     background-color: var(--input-bg);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -147,14 +162,14 @@ input[type="text"]:focus {
 .btn-filter {
     padding: 10px 20px;
     border-radius: 8px;
-    background: #334155;
-    color: #f8fafc;
-    border: 1px solid #475569;
+    background: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
     cursor: pointer;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 1.2rem;
 }
-.btn-filter:hover { background: #475569; }
+.btn-filter:hover { background: var(--border); }
 
 .modal-overlay {
     display: none;
@@ -172,15 +187,15 @@ input[type="text"]:focus {
 .modal-overlay.mostrar { display: flex; }
 
 .modal-box {
-    background: #1e293b;
+    background: var(--card);
     padding: 25px 30px;
     border-radius: 12px;
-    border: 1px solid #475569;
+    border: 1px solid var(--border);
     box-shadow: 0px 10px 40px rgba(0,0,0,0.8);
     width: 90%;
-    max-width: 450px; /* Aumentamos a largura para caber as colunas */
-    max-height: 85vh; /* Se o menu ficar muito grande, ele cria uma barra de rolagem! */
-    overflow-y: auto; /* Ativa a rolagem */
+    max-width: 450px; 
+    max-height: 85vh; 
+    overflow-y: auto; 
     text-align: left;
     position: relative;
 }
@@ -192,29 +207,28 @@ input[type="text"]:focus {
     margin-bottom: 20px;
 }
 
-/* --- Novas classes para organizar os Filtros --- */
 .filter-section {
-    background: #0f172a;
+    background: var(--background);
     padding: 15px;
     border-radius: 8px;
-    border: 1px solid #334155;
+    border: 1px solid var(--border);
     margin-bottom: 15px;
 }
 
 .filter-section h4 {
-    color: #10b981; /* Verde destaque */
+    color: var(--primary); 
     margin-top: 0;
     margin-bottom: 12px;
-    font-size: 13px;
+    font-size: 1.2rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--border);
     padding-bottom: 6px;
 }
 
 .filter-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Divide em 2 colunas perfeitinhas */
+    grid-template-columns: 1fr 1fr; 
     gap: 10px;
 }
 
@@ -222,14 +236,14 @@ input[type="text"]:focus {
     display: flex;
     align-items: center;
     color: #cbd5e1;
-    font-size: 14px;
+    font-size: 1.1rem;
     cursor: pointer;
 }
 
 .checkbox-label input {
     margin-right: 8px;
     cursor: pointer;
-    transform: scale(1.1); /* Diminuí um tiquinho pra caber nas colunas */
+    transform: scale(1.1); 
 }
 
 .btn-close-modal {
@@ -240,7 +254,7 @@ input[type="text"]:focus {
     border: none;
     cursor: pointer;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 1rem;
     display: block;
     margin: 0 auto;
 }
@@ -290,7 +304,7 @@ input[type="text"]:focus {
     width: 100%;
     padding: 14px;
     color: #FFFFF0;
-    font-size: 0.95rem;
+    font-size: 1.25rem;
     font-weight: 600;
     border: none;
     border-radius: 6px;
@@ -311,10 +325,9 @@ input[type="text"]:focus {
 #btn-aleatorio { background-color: #1e293b; border: 1px solid var(--border); }
 #btn-aleatorio:hover { background-color: #334155; }
 
-/* --- Media Query --- */
 @media (min-width: 768px) {
     body { padding: 40px 20px; }
-    h1 { font-size: 2.2rem; }
+    h1 { font-size: 4rem; }
     .controls { grid-template-columns: repeat(4, 1fr); padding: 30px; }
     
     #output-container .color-row {
@@ -328,5 +341,10 @@ input[type="text"]:focus {
         width: 96px !important;
         height: 96px !important;
     }
-    #output-container span { font-size: 11px; }
+    #output-container span {
+    font-weight: 600;
+    color: var(--foreground) !important;
+    text-transform: capitalize;
+    letter-spacing: -0.01em;
+}
 }
