@@ -1,18 +1,26 @@
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from js import window, document
-import base64
-import math
-import random
-import asyncio
-import requests
+import base64, math, random, asyncio, requests, unicodedata, textwrap, heapq
 from pyodide.http import pyfetch
 from pyodide.ffi import create_proxy
-from pyscript import document
 
 # --- VARIÁVEL GLOBAL PARA GUARDAR OS DADOS ---
 SPRITE_CACHE = {}
+COLOR_DATA = {}
 poke_data = []
+
+# Cache de nomes de cor já resolvidos (hex -> nome), evita rebuscar a mesma cor
+NOME_COR_CACHE = {}
+
+# Só fica True depois que o banco de ~32 mil cores foi enviado pro JS.
+# Evita que a 1ª renderização (que roda antes desse banco carregar) grave
+# "Custom Color" no cache pra sempre.
+BANCO_CORES_PRONTO = False
+
+# Cache dos filtros avançados: só reprocessa quando algo realmente mudou
+FILTROS_CACHE = None
+FILTROS_SUJOS = True
 
 def rgb_to_lab(r, g, b):
     r, g, b = r / 255.0, g / 255.0, b / 255.0
@@ -53,40 +61,49 @@ def parse_input_color(hex_color):
 def color_distance(lab1, lab2):
     return math.sqrt(sum((a - b) ** 2 for a, b in zip(lab1, lab2)))
 
+def buscar_nome_cor(cor_hex, banco_cores):
+    cor_hex_upper = cor_hex.upper()
 
-# --- Sincronização e Validação do Input ---
-def handle_hex_input(event):
-    idx = event.target.id[3:]
-    val = event.target.value.strip()
+    # 1. Cache: se já buscamos essa cor exata antes, retorna na hora
+    if cor_hex_upper in NOME_COR_CACHE:
+        return NOME_COR_CACHE[cor_hex_upper]
+
+    # 2. Match exato no banco de cores (sempre confiável, pode cachear)
+    if cor_hex_upper in banco_cores:
+        nome_exibido = banco_cores[cor_hex_upper].get("name", "Custom Color")
+        NOME_COR_CACHE[cor_hex_upper] = nome_exibido
+        return nome_exibido
+
+    # 3. Busca aproximada: delegada pro JS
+    lab_alvo = rgb_to_lab(*parse_input_color(cor_hex))
+    try:
+        nome_exibido = window.buscarNomeCorJS(lab_alvo)
+    except Exception as e:
+        print(f"Erro ao buscar nome de cor via JS: {e}")
+        nome_exibido = "Custom Color"
+
+    # Só grava no cache se o banco já estiver carregado de verdade.
+    # Caso contrário, essa resposta é só um "Custom Color" provisório
+    # (banco ainda vazio) e não pode virar cache permanente.
+    if BANCO_CORES_PRONTO:
+        NOME_COR_CACHE[cor_hex_upper] = nome_exibido
+
+    return nome_exibido
     
-    if val.startswith('#'):
-        val = val[1:]
-        
-    val = "".join([c for c in val if c.isalnum()])[:6]
-    
-    if val:
-        event.target.value = f"#{val}"
-    else:
-        event.target.value = ""
-        
-    if len(val) == 6:
-        try:
-            int(val, 16)
-            document.querySelector(f"#c{idx}").value = f"#{val}"
-            gerar_paleta(None)
-        except ValueError:
-            pass
-
-def sync_hex_from_picker(event):
-    idx = event.target.id[1:]
-    document.querySelector(f"#hex{idx}").value = event.target.value
-    gerar_paleta(None)
-
-for i in range(1, 5):
-    document.querySelector(f"#hex{i}").addEventListener("input", create_proxy(handle_hex_input))
-    document.querySelector(f"#c{i}").addEventListener("input", create_proxy(sync_hex_from_picker))
+def remover_acentos_para_imagem(texto):
+    # Transforma "ā" em "a", "é" em "e", etc.
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(c) != 'Mn'
+    )
 
 def aplicar_filtros_avancados():
+    global FILTROS_CACHE, FILTROS_SUJOS
+
+    # Se nada mudou desde a última vez, devolve o resultado já calculado
+    if not FILTROS_SUJOS and FILTROS_CACHE is not None:
+        return FILTROS_CACHE
+
     # 1. Lê os checkboxes de regras únicas
     chk_repetidos = document.getElementById("chk-repetidos").checked
     chk_shiny_only = document.getElementById("chk-apenas-shiny").checked
@@ -130,32 +147,31 @@ def aplicar_filtros_avancados():
         
         # Se passou por todas as barreiras, está aprovado!
         dados_filtrados.append(p)
-        
-    return dados_filtrados, chk_repetidos
+
+    FILTROS_CACHE = (dados_filtrados, chk_repetidos)
+    FILTROS_SUJOS = False
+    return FILTROS_CACHE
 
 # --- FUNÇÃO PRINCIPAL DE GERAR PALETA ---
-def gerar_paleta(event):
+def gerar_paleta(event=None):
     global poke_data
     if not poke_data:
         print("Os dados dos Pokémon ainda estão sendo carregados. Aguarde um instante...")
         return
 
-    cores_hex = []
-    for i in range(1, 5):
-        val_txt = document.querySelector(f"#hex{i}").value.strip()
-        if val_txt and val_txt.startswith('#'):
-            cores_hex.append(val_txt)
-        else:
-            cores_hex.append(document.querySelector(f"#c{i}").value)
-
+    elementos_cor = document.querySelectorAll(".cor-input")
+    elementos_texto = document.querySelectorAll(".hex-input")
     container = document.querySelector("#output-container")
-    container.innerHTML = "" 
-    
-    ids_usados = set()
+    container.innerHTML = ""
+    dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
+    ids_usados_global = set()
 
-    for cor_hex in cores_hex:
+    # Loop de Cores
+    for i in range(len(elementos_cor)):
+        cor_hex = elementos_cor[i].value
         cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
         
+        # Criação da linha da cor (mantém sua estrutura visual limpa via classes do CSS)
         row = document.createElement("div")
         row.className = "color-row"
         row.style.display = "flex"
@@ -163,44 +179,130 @@ def gerar_paleta(event):
         row.style.marginBottom = "5px"
         row.style.gap = "15px"
         
-        color_box = document.createElement("div")
-        color_box.style.width = "60px"
-        color_box.style.height = "60px"
-        color_box.style.backgroundColor = cor_hex
-        color_box.style.borderRadius = "8px"
-        
+        # Container da caixinha de cor editável
         color_container = document.createElement("div")
+        color_container.className = "grupo-cor-editavel"
         color_container.style.display = "flex"
         color_container.style.flexDirection = "column"
         color_container.style.alignItems = "center"
-        color_container.style.gap = "6px"
+        color_container.style.gap = "10px"
+        color_container.style.padding = "3px"
+        color_container.style.borderRadius = "12px"
+        color_container.style.minHeight = "110px"
+        color_container.style.transform = "translateY(-6px)"
         
-        color_text = document.createElement("span")
-        color_text.innerText = cor_hex.upper()
+        color_box = document.createElement("input")
+        color_box.type = "color"
+        color_box.value = cor_hex
+        color_box.className = "cor-editavel-bot"
+        color_box.style.width = "60px"
+        color_box.style.height = "60px"
+        color_box.style.minWidth = "60px"
+        color_box.style.minHeight = "60px"
+        color_box.style.flexShrink = "0"
+        color_box.style.cursor = "pointer"
+        color_box.style.backgroundColor = "transparent"
+        
+        color_text = document.createElement("input")
+        color_text.type = "text"
+        color_text.value = cor_hex.upper()
+        color_text.maxLength = 7
+        color_text.style.width = "90px"
+        color_text.style.background = "transparent"
+        color_text.style.border = "none"
+        color_text.style.color = "#cbd5e1"
         color_text.style.fontSize = "16px"
         color_text.style.fontWeight = "600"
-        color_text.style.color = "#cbd5e1" 
+        color_text.style.textAlign = "center"
+        color_text.style.outline = "none"
+        
+        nome_cor = buscar_nome_cor(cor_hex, COLOR_DATA)
+        name_display = document.createElement("div")
+        name_display.innerText = nome_cor
+        name_display.style.fontSize = "14px"
+        name_display.style.color = "#94a3b8"
+        name_display.style.marginTop = "-6px"
+        name_display.style.textAlign = "center"
+        name_display.style.pointerEvents = "none"
 
+        # Escutas de eventos
+        def criar_sincronizador(index):
+            def sincronizar(e):
+                novo_valor = e.target.value.strip()
+                if len(novo_valor) == 7 and novo_valor.startswith("#"):
+                    elementos_cor[index].value = novo_valor
+                    elementos_texto[index].value = novo_valor.upper()
+                    gerar_paleta(None)
+                else:
+                    e.target.value = elementos_texto[index].value.upper()
+            return create_proxy(sincronizar)
+
+        proxy_sync = criar_sincronizador(i)
+        color_box.addEventListener("change", proxy_sync)
+        color_text.addEventListener("change", proxy_sync)
+        
         color_container.appendChild(color_box)
         color_container.appendChild(color_text)
-        
+        color_container.appendChild(name_display)
         row.appendChild(color_container)
-        
-        dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
 
-        candidatos = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))
-        
-        ids_usados = set()
-        top7 = []
-        for p in candidatos:
-            if not permite_repetidos:
-                if p["id_base"] in ids_usados:
+        # Filtra os já usados em colunas ANTERIORES (se aplicável).
+        if permite_repetidos:
+            candidatos_disponiveis = dados_filtrados
+        else:
+            candidatos_disponiveis = [
+                p for p in dados_filtrados if p["id_base"] not in ids_usados_global
+            ]
+
+        if permite_repetidos:
+            # Sem regra de duplicidade: os 7 mais próximos, direto.
+            top7 = heapq.nsmallest(
+                7, candidatos_disponiveis,
+                key=lambda p: color_distance(cor_lab, p["color"])
+            )
+        else:
+            # Pega uma "sobra" de candidatos (não só 7) porque cada Pokémon
+            # pode aparecer 2x na base (normal + shiny) com cores diferentes.
+            # Sem esse buffer, o normal e o shiny do mesmo Pokémon podem os
+            # dois cair entre os 7 mais próximos DESTA MESMA coluna, já que
+            # ids_usados_global só bloqueia repetição entre colunas diferentes.
+            BUFFER_CANDIDATOS = 40
+            candidatos_proximos = heapq.nsmallest(
+                BUFFER_CANDIDATOS, candidatos_disponiveis,
+                key=lambda p: color_distance(cor_lab, p["color"])
+            )
+
+            top7 = []
+            ids_nesta_coluna = set()
+            for p in candidatos_proximos:
+                if p["id_base"] in ids_nesta_coluna:
                     continue
-                ids_usados.add(p["id_base"])
-                
-            top7.append(p)
-            if len(top7) == 7: break 
+                ids_nesta_coluna.add(p["id_base"])
+                top7.append(p)
+                if len(top7) == 7:
+                    break
+
+            # Caso raríssimo: o buffer não tinha 7 IDs únicos (filtros muito
+            # restritos). Refaz varrendo tudo, sem limite de buffer.
+            if len(top7) < 7 and len(candidatos_disponiveis) > BUFFER_CANDIDATOS:
+                top7 = []
+                ids_nesta_coluna = set()
+                candidatos_completos = sorted(
+                    candidatos_disponiveis,
+                    key=lambda p: color_distance(cor_lab, p["color"])
+                )
+                for p in candidatos_completos:
+                    if p["id_base"] in ids_nesta_coluna:
+                        continue
+                    ids_nesta_coluna.add(p["id_base"])
+                    top7.append(p)
+                    if len(top7) == 7:
+                        break
+
+            # Trava esses IDs (já sem duplicatas) para as próximas colunas
+            ids_usados_global.update(ids_nesta_coluna)
         
+        # Renderização dos cards dos Pokémon
         for pkmn in top7:
             pkmn_box = document.createElement("div")
             pkmn_box.style.display = "flex"
@@ -214,7 +316,6 @@ def gerar_paleta(event):
             
             img = document.createElement("img")
             img.src = caminho_local
-            
             img.style.width = "96px"
             img.style.height = "96px"
             img.style.cursor = "pointer"
@@ -224,10 +325,8 @@ def gerar_paleta(event):
             img.onmouseover = lambda e: setattr(e.target.style, "transform", "scale(2.0)")
             img.onmouseout = lambda e: setattr(e.target.style, "transform", "scale(1.0)")
             
-            nome_limpo = pkmn['name']
-            
             name_tag = document.createElement("span")
-            name_tag.innerText = nome_limpo
+            name_tag.innerText = pkmn['name']
             name_tag.style.fontSize = "16px"
             name_tag.style.marginTop = "2px"
             name_tag.style.textAlign = "center"
@@ -240,52 +339,73 @@ def gerar_paleta(event):
         container.appendChild(row)
 
 def gerar_paleta_aleatoria(event):
-    for i in range(1, 5):
+    elementos_cor = document.querySelectorAll(".cor-input")
+    elementos_texto = document.querySelectorAll(".hex-input")
+
+    for i in range(len(elementos_cor)):
         r = random.randint(0, 255)
         g = random.randint(0, 255)
         b = random.randint(0, 255)
         hex_aleatorio = f"#{r:02X}{g:02X}{b:02X}"
         
-        document.querySelector(f"#c{i}").value = hex_aleatorio
-        document.querySelector(f"#hex{i}").value = hex_aleatorio
-        
+        elementos_cor[i].value = hex_aleatorio
+        elementos_texto[i].value = hex_aleatorio
+    
     gerar_paleta(None)
 
 async def carregar_dados_iniciais():
-    global poke_data
-    ARQUIVO_JSON = "./pokemon_colors_simple.json"
-    
+    global poke_data, COLOR_DATA, BANCO_CORES_PRONTO
     try:
-        response = await pyfetch(ARQUIVO_JSON)
-        poke_data = await response.json()
-        
-        gerar_paleta(None)
-        
+        response = await pyfetch("pokemon_colors_simple.json")
+        if response.status == 200:
+            poke_data = await response.json()
+            print("Dados dos Pokémon carregados com sucesso!")
+            
+            # Dispara a geração automática direto, sem loops pesados
+            gerar_paleta(None)
     except Exception as e:
-        print("Erro ao carregar o JSON inicial:", e)
+        print(f"Erro na inicialização: {e}")
+
+    try:
+        resp_cores = await pyfetch("./cores_finais.json")
+        COLOR_DATA = await resp_cores.json()
+
+        # Pré-calcula o Lab de cada uma das ~32 mil cores UMA ÚNICA VEZ
+        # e manda pro JS, que vai fazer a busca de cor mais próxima nativamente.
+        lista_para_js = []
+        for hex_key, dados in COLOR_DATA.items():
+            if not hex_key.startswith("#"):
+                continue
+            L, a, b = rgb_to_lab(*parse_input_color(hex_key))
+            lista_para_js.append({
+                "name": dados.get("name", "Custom Color"),
+                "l": L, "a": a, "b": b
+            })
+
+        window.prepararBancoCoresJS(lista_para_js)
+        BANCO_CORES_PRONTO = True
+        print(f"Banco de {len(lista_para_js)} cores preparado no JS.")
+    except Exception as e:
+        print("Erro ao carregar cores_finais.json:", e)
+    gerar_paleta(None)
 
 def exportar_paleta_imagem(event):
     global poke_data
     if not poke_data: return
 
-    cores_hex = []
-    for i in range(1, 5):
-        val_txt = document.querySelector(f"#hex{i}").value.strip()
-        if val_txt and val_txt.startswith('#'):
-            cores_hex.append(val_txt)
-        else:
-            cores_hex.append(document.querySelector(f"#c{i}").value)
+    elementos_cor = document.querySelectorAll(".cor-input")
+    cores_hex = [el.value for el in elementos_cor]
 
     largura_img = 1100
-    altura_img = 620 # Aumentamos um pouquinho a altura para acomodar a segunda linha de texto
+    espacamento_vertical = 140
+    altura_img = 40 + (len(cores_hex) * espacamento_vertical)
+    
     img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
     
-    from PIL import ImageDraw, ImageFont
     draw = ImageDraw.Draw(img_final)
     
     try:
         caminho_fonte = "fonts/VCR_OSD_MONO_1.001.ttf"
-
         font_hex = ImageFont.truetype(caminho_fonte, size=16)
         font_pkmn = ImageFont.truetype(caminho_fonte, size=16)
     except Exception as e:
@@ -294,7 +414,6 @@ def exportar_paleta_imagem(event):
         font_pkmn = ImageFont.load_default()
     
     y_offset = 40
-    espacamento_linhas = 140 # Aumentamos o espaçamento vertical entre os cards por conta da quebra de linha
 
     for cor_hex in cores_hex:
         cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
@@ -305,7 +424,16 @@ def exportar_paleta_imagem(event):
             fill=cor_hex
         )
         draw.text((42, y_offset + 80), cor_hex.upper(), fill="#cbd5e1", font=font_hex)
+        nome_cor = buscar_nome_cor(cor_hex, COLOR_DATA)
+        nome_cor_limpo = remover_acentos_para_imagem(nome_cor)
+        linhas_cor = textwrap.wrap(nome_cor_limpo, width=14) 
         
+        if len(linhas_cor) >= 2:
+            draw.text((42, y_offset + 95), linhas_cor[0], fill="#94a3b8", font=font_hex)
+            draw.text((42, y_offset + 110), linhas_cor[1], fill="#64748b", font=font_hex)
+        else:
+            draw.text((42, y_offset + 95), nome_cor_limpo, fill="#94a3b8", font=font_hex)
+
         dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
         
         candidatos = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))
@@ -385,7 +513,7 @@ def exportar_paleta_imagem(event):
             
             x_offset += 130
             
-        y_offset += espacamento_linhas
+        y_offset += espacamento_vertical
 
     try:
         buffered = BytesIO()
@@ -414,7 +542,7 @@ def exportar_paleta_imagem(event):
                     </head>
                     <body>
                         <img src="{data_url}" alt="Sua Paleta Pokémon">
-                        <p>👆 Pressione e segure na imagem para "Adicionar às Fotos" 📸</p>
+                        <p>Pressione e segure na imagem para "Adicionar às Fotos"</p>
                     </body>
                     </html>
                 """)
@@ -436,65 +564,78 @@ def exportar_paleta_stories(event):
     global poke_data
     if not poke_data: return
 
-    cores_hex = []
-    for i in range(1, 5):
-        val_txt = document.querySelector(f"#hex{i}").value.strip()
-        if val_txt and val_txt.startswith('#'):
-            cores_hex.append(val_txt)
-        else:
-            cores_hex.append(document.querySelector(f"#c{i}").value)
-
-    # 1. RESOLUÇÃO PADRÃO STORIES: 1080 x 1920 pixels (Vertical)
-    largura_img = 1080
-    altura_img = 1920
-    img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
-    
-    from PIL import ImageDraw, ImageFont
-    draw = ImageDraw.Draw(img_final)
-    
     try:
         caminho_fonte = "fonts/VCR_OSD_MONO_1.001.ttf"
-
-        font_titulo = ImageFont.truetype(caminho_fonte, size=46)
         font_hex = ImageFont.truetype(caminho_fonte, size=24)
-        font_pkmn = ImageFont.truetype(caminho_fonte, size=24)
+        font_pkmn = ImageFont.truetype(caminho_fonte, size=20)
+        font_titulo = ImageFont.truetype(caminho_fonte, size=36)
     except Exception as e:
         print(f"Erro ao carregar fonte do diretório, usando a padrão: {e}")
-        font_titulo = ImageFont.load_default()
         font_hex = ImageFont.load_default()
         font_pkmn = ImageFont.load_default()
-        
-    # Título principal no topo
-    draw.text((60, 100), "MINHA PALETA POKÉMON", fill="#cbd5e1", font=font_titulo)
-    
-    # MATEMÁTICA DAS COLUNAS (Ajustada para sprites maiores)
-    largura_util = 1080 - 100  # 980px livres (Margens de 50px nas laterais)
-    largura_coluna = 220       # Coluna ligeiramente maior para o sprite de 160px
-    espacamento_coluna = (largura_util - (4 * largura_coluna)) // 3
-    
-    # O DOBRO DO TAMANHO: Pula de 96px para 160px (preserva proporção e foca no mobile)
-    largura_sprite = 160
+        font_titulo = ImageFont.load_default()
 
+    elementos_cor = document.querySelectorAll(".cor-input")
+    cores_hex = [el.value for el in elementos_cor]
+
+    # 1. PARÂMETROS DINÂMICOS
+    altura_img = 1920
+    largura_coluna = 250 
+    padding_lateral = 50
+    espacamento_entre = 30
+    largura_sprite = 160 # Mantendo o sprite maior para Stories
+    
+    # Cálculo da largura total
+    largura_img = (padding_lateral * 2) + (len(cores_hex) * largura_coluna) + ((len(cores_hex) - 1) * espacamento_entre)
+    
+    img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
+    draw = ImageDraw.Draw(img_final)
+
+    # 2. TÍTULO CENTRALIZADO DINAMICAMENTE
+    # Calcula o tamanho do texto para centralizar na largura_img
+    bbox_titulo = draw.textbbox((0, 0), "MINHA PALETA POKÉMON", font=font_titulo)
+    largura_titulo = bbox_titulo[2] - bbox_titulo[0]
+    draw.text(((largura_img - largura_titulo) // 2, 100), "MINHA PALETA POKÉMON", fill="#cbd5e1", font=font_titulo)
+    
+    # 3. LOOP DE COLUNAS
     for idx_coluna, cor_hex in enumerate(cores_hex):
         cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
         
-        # Posição X da coluna
-        x_coluna = 50 + idx_coluna * (largura_coluna + espacamento_coluna)
+        # Calcula X baseado na largura total dinâmica
+        x_coluna = padding_lateral + (idx_coluna * (largura_coluna + espacamento_entre))
         
-        # 1. DESENHA OS BLOCOS DE CORES NO TOPO
+        # Desenha o Bloco de Cor (centralizado dentro da sua coluna de 250px)
         x_rect_start = x_coluna + (largura_coluna // 2) - 80
-        x_rect_end = x_rect_start + 160
         draw.rounded_rectangle(
-            [x_rect_start, 220, x_rect_end, 340], 
+            [x_rect_start, 220, x_rect_start + 160, 340], 
             radius=14, 
             fill=cor_hex
         )
-        
         box_h = draw.textbbox((0, 0), cor_hex.upper(), font=font_hex)
         w_h = box_h[2] - box_h[0]
         x_text_hex = x_coluna + (largura_coluna // 2) - (w_h // 2)
         draw.text((x_text_hex, 355), cor_hex.upper(), fill="#94a3b8", font=font_hex)
         
+        nome_cor = buscar_nome_cor(cor_hex, COLOR_DATA)
+        nome_cor_limpo = remover_acentos_para_imagem(nome_cor)     
+        linhas_cor = textwrap.wrap(nome_cor_limpo, width=16) 
+       
+        if len(linhas_cor) >= 2:
+            b_c1 = draw.textbbox((0, 0), linhas_cor[0], font=font_hex)
+            w_c1 = b_c1[2] - b_c1[0]
+            x_c1 = x_coluna + (largura_coluna // 2) - (w_c1 // 2)
+            draw.text((x_c1, 390), linhas_cor[0], fill="#94a3b8", font=font_hex)
+            
+            b_c2 = draw.textbbox((0, 0), linhas_cor[1], font=font_hex)
+            w_c2 = b_c2[2] - b_c2[0]
+            x_c2 = x_coluna + (largura_coluna // 2) - (w_c2 // 2)
+            draw.text((x_c2, 415), linhas_cor[1], fill="#64748b", font=font_hex)
+        else:
+            b_c = draw.textbbox((0, 0), nome_cor_limpo, font=font_hex)
+            w_c = b_c[2] - b_c[0]
+            x_c = x_coluna + (largura_coluna // 2) - (w_c // 2)
+            draw.text((x_c, 390), nome_cor_limpo, fill="#94a3b8", font=font_hex)
+
         dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
 
         candidatos = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))
@@ -510,8 +651,8 @@ def exportar_paleta_stories(event):
             if len(top5) == 5: break 
             
         # 2. DESENHA OS 5 POKÉMON EMPILHADOS
-        y_pokemon_start = 450      # Ponto de partida vertical
-        espacamento_vertical = 270  # Mais espaço vertical para acomodar o sprite gigante + texto
+        y_pokemon_start = 450     
+        espacamento_vertical = 270  
 
         href_atual = window.location.href.split('?')[0].split('#')[0]
         base_url = href_atual.rsplit('/', 1)[0] if href_atual.endswith('.html') else href_atual.rstrip('/')
@@ -556,18 +697,18 @@ def exportar_paleta_stories(event):
                     box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
                     w1 = box1[2] - box1[0]
                     x_l1 = x_coluna + (largura_coluna // 2) - (w1 // 2)
-                    draw.text((x_l1, y_sprite + 155), linha1, fill="#FFFFF0", font=font_pkmn)
+                    draw.text((x_l1, y_sprite + 165), linha1, fill="#FFFFF0", font=font_pkmn)
                     
                     box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
                     w2 = box2[2] - box2[0]
                     x_l2 = x_coluna + (largura_coluna // 2) - (w2 // 2)
-                    draw.text((x_l2, y_sprite + 178), linha2, fill="#94a3b8", font=font_pkmn)
+                    draw.text((x_l2, y_sprite + 188), linha2, fill="#94a3b8", font=font_pkmn)
                 
                 else:
                     text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
                     largura_texto = text_box[2] - text_box[0]
                     x_texto = x_coluna + (largura_coluna // 2) - (largura_texto // 2)
-                    draw.text((x_texto, y_sprite + 155), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                    draw.text((x_texto, y_sprite + 165), nome_completo, fill="#FFFFF0", font=font_pkmn)
                     
             except Exception as e:
                 print(f"Erro ao desenhar coluna {idx_coluna} no Pokémon {pkmn['name']}: {e}")
@@ -596,7 +737,7 @@ def exportar_paleta_stories(event):
                     </head>
                     <body>
                         <img src="{data_url}" alt="Sua Paleta Pokémon 9:16">
-                        <p>👆 Pressione e segure na imagem para "Adicionar às Fotos" e postar nos Stories! 📸</p>
+                        <p>Pressione e segure na imagem para "Adicionar às Fotos" e postar nos Stories!</p>
                     </body>
                     </html>
                 """)
@@ -610,8 +751,169 @@ def exportar_paleta_stories(event):
     except Exception as e:
         print("Erro ao processar download da imagem vertical:", e)
 
+def exportar_pantone_chart(event):
+    global poke_data
+    if not poke_data: return
+
+    elementos_cor = document.querySelectorAll(".cor-input")
+    cores_hex = [el.value for el in elementos_cor]
+    try:
+        caminho_fonte = "fonts/VCR_OSD_MONO_1.001.ttf"
+        font_hex = ImageFont.truetype(caminho_fonte, size=24)
+        font_pkmn = ImageFont.truetype(caminho_fonte, size=20)
+        font_titulo = ImageFont.truetype(caminho_fonte, size=36)
+    except Exception as e:
+        print(f"Erro ao carregar fonte do diretório, usando a padrão: {e}")
+        font_hex = ImageFont.load_default()
+        font_pkmn = ImageFont.load_default()
+        font_titulo = ImageFont.load_default()
+
+    # --- CONFIGURAÇÕES DINÂMICAS ---
+    LARGURA_CARD = 500
+    ALTURA_CARD = 420
+    PADDING = 40
+    COLUNAS = 2
+    num_cores = len(cores_hex)
+    num_linhas = math.ceil(num_cores / COLUNAS)
+    
+    img_largura = (COLUNAS * LARGURA_CARD) + ((COLUNAS + 1) * PADDING)
+    img_altura = (num_linhas * ALTURA_CARD) + ((num_linhas + 1) * PADDING) + 100
+    
+    img_final = Image.new("RGB", (img_largura, img_altura), "#1b1b1b")
+    draw = ImageDraw.Draw(img_final)
+
+    draw.text((PADDING, 20), "My Pantone Birth Chart Palette", fill="white", font=font_titulo)
+
+    # --- LOOP DINÂMICO ---
+    href_atual = window.location.href.split('?')[0].split('#')[0]
+    base_url = href_atual.rsplit('/', 1)[0] if href_atual.endswith('.html') else href_atual.rstrip('/')
+
+    for i, cor_hex in enumerate(cores_hex):
+        coluna = i % COLUNAS
+        linha = i // COLUNAS
+        x_bloco = PADDING + (coluna * (LARGURA_CARD + PADDING))
+        y_bloco = 120 + (linha * (ALTURA_CARD + PADDING))
+        
+        # Desenha o Card
+        draw.rectangle([x_bloco, y_bloco, x_bloco + LARGURA_CARD, y_bloco + ALTURA_CARD], fill=cor_hex)
+        
+        # --- VERIFICAÇÃO DIRETAMENTE NO COLOR_DATA ---
+        hex_chave = cor_hex.upper()
+        
+        # Caso 1: A cor existe no JSON e possui os dados completos de Pantone
+        if hex_chave in COLOR_DATA and "code" in COLOR_DATA[hex_chave] and "cat" in COLOR_DATA[hex_chave]:
+            info = COLOR_DATA[hex_chave]
+            
+            draw.text((x_bloco + 20, y_bloco + 20), info['cat'].upper(), fill="white", font=font_pkmn)
+            draw.text((x_bloco + 20, y_bloco + 50), info['name'], fill="white", font=font_titulo)
+            draw.text((x_bloco + 20, y_bloco + 320), hex_chave, fill="white", font=font_hex)
+            draw.text((x_bloco + 20, y_bloco + 350), f"Pantone match: {info['code']}", fill="white", font=font_pkmn)
+            
+        else:
+            # Caso 2: Cor customizada (reaproveita buscar_nome_cor, que já usa
+            # cache por hex e delega a busca aproximada pro JS + Quebra de texto)
+            nome_aproximado = buscar_nome_cor(cor_hex, COLOR_DATA)
+
+            # Imprime Categoria Fixa
+            draw.text((x_bloco + 20, y_bloco + 20), "PALETTE", fill="white", font=font_pkmn)
+            
+            # Limpa acentos e aplica a quebra esperta de texto
+            import textwrap
+            nome_limpo = remover_acentos_para_imagem(nome_aproximado)
+            linhas_cor = textwrap.wrap(nome_limpo, width=15)
+            
+            if len(linhas_cor) >= 2:
+                draw.text((x_bloco + 20, y_bloco + 50), linhas_cor[0], fill="white", font=font_titulo)
+                draw.text((x_bloco + 20, y_bloco + 95), linhas_cor[1], fill="#e2e8f0", font=font_titulo)
+            else:
+                draw.text((x_bloco + 20, y_bloco + 50), nome_limpo, fill="white", font=font_titulo)
+                
+            # Imprime apenas o Hex (Sem a linha "Pantone match")
+            draw.text((x_bloco + 20, y_bloco + 320), hex_chave, fill="white", font=font_hex)
+
+        # Sprite do Pokémon mais próximo (Mantido igual)
+        cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
+        dados_filtrados, _ = aplicar_filtros_avancados()
+        candidato = sorted(dados_filtrados, key=lambda p: color_distance(cor_lab, p["color"]))[0]
+        
+        try:
+            id_pkmn = candidato['id_base']
+            sufixo = "_shiny" if "(Shiny)" in candidato['name'] else ""
+            url = f"{base_url}/sprites/{id_pkmn}{sufixo}.png"
+            
+            if url not in SPRITE_CACHE:
+                resp = requests.get(url, timeout=5)
+                if resp.status_code == 200: SPRITE_CACHE[url] = resp.content
+            
+            sprite = Image.open(BytesIO(SPRITE_CACHE[url])).convert("RGBA").resize((160, 160), Image.NEAREST)
+            img_final.paste(sprite, (x_bloco + 300, y_bloco + 180), sprite)
+        except Exception as e:
+            print(f"Erro sprite Pantone: {e}")
+
+    # --- EXPORTAÇÃO (Mesma lógica das outras funções) ---
+    buffered = BytesIO()
+    img_final.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+    # Fluxo de exportação (Web / iOS)
+    try:
+        buffered = BytesIO()
+        img_final.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        data_url = f"data:image/png;base64,{img_str}"
+
+        is_ios = "iPhone" in window.navigator.userAgent or "iPad" in window.navigator.userAgent
+
+        if is_ios:
+            nova_aba = window.open("", "_blank")
+            if nova_aba:
+                nova_aba.document.write(f"""
+                    <html>
+                    <head>
+                        <title>Salvar Moodboard</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                            body {{ background: #1b1b1b; color: #cbd5e1; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
+                            img {{ max-width: 100%; max-height: 85vh; height: auto; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.6); margin-bottom: 15px; }}
+                            p {{ font-size: 14px; letter-spacing: 0.05em; }}
+                        </style>
+                    </head>
+                    <body>
+                        <img src="{data_url}" alt="Sua Moodboard Pokémon 9:16">
+                        <p>Pressione e segure na imagem para "Adicionar às Fotos"</p>
+                    </body>
+                    </html>
+                """)
+                nova_aba.document.close()
+        else:
+            a = document.createElement("a")
+            a.href = data_url
+            a.download = "meu-moodboard-pokemon.png"
+            a.click()
+
+    except Exception as e:
+        print("Erro ao processar download de moodboard:", e)
+
+def fechar_filtros_e_gerar(event=None):
+    global FILTROS_SUJOS
+    FILTROS_SUJOS = True  # os checkboxes podem ter mudado, força reprocessar
+    gerar_paleta(event)
+
 asyncio.ensure_future(carregar_dados_iniciais())
-document.getElementById("btn-fechar-filtros").onclick = gerar_paleta
-document.querySelector("#btn-exportar").addEventListener("click", create_proxy(exportar_paleta_imagem))    
-document.querySelector("#btn-stories").addEventListener("click", create_proxy(exportar_paleta_stories))       
-document.querySelector("#btn-aleatorio").addEventListener("click", create_proxy(gerar_paleta_aleatoria))
+document.getElementById("btn-fechar-filtros").onclick = create_proxy(fechar_filtros_e_gerar)
+proxy_gerar = create_proxy(gerar_paleta)
+
+def atualizar_tela(event):
+    window.setTimeout(proxy_gerar, 10)
+
+proxy_atualizar = create_proxy(atualizar_tela)
+proxy_moodboard = create_proxy(exportar_pantone_chart)
+proxy_paleta = create_proxy(exportar_paleta_imagem)
+proxy_stories = create_proxy(exportar_paleta_stories)
+proxy_aleatorio = create_proxy(gerar_paleta_aleatoria)
+document.getElementById("lista-cores").addEventListener("input", proxy_atualizar)
+document.getElementById("btn-add-cor").addEventListener("click", proxy_atualizar)
+document.getElementById("btn-exportar_pantone_chart").addEventListener("click", proxy_moodboard)
+document.querySelector("#btn-exportar").addEventListener("click", proxy_paleta)
+document.querySelector("#btn-stories").addEventListener("click", proxy_stories)
+document.querySelector("#btn-aleatorio").addEventListener("click", proxy_aleatorio)

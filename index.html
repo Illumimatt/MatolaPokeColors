@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Paleta Pokémon</title>
+    <title>Custmoziador de Paleta Pokémon</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Gerador de Paleta Pokémon</h1>
+    <h1>Customizador de Paleta Pokémon</h1>
     
     <p class="subtitle">
         Insira as suas cores do 
@@ -36,22 +36,29 @@
     </details>
 
     <div class="controls">
-        <div class="color-row">
-            <input type="color" id="c1" value="#7A59C7">
-            <input type="text" id="hex1" placeholder="#7A59C7" maxlength="7">
+        <div id="lista-cores">
+            <div class="color-row">
+                <input type="color" class="cor-input" value="#7A59C7">
+                <input type="text" class="hex-input" value="#7A59C7" maxlength="7">
+                <button class="btn-excluir">X</button>
+            </div>
+            <div class="color-row">
+                <input type="color" class="cor-input" value="#B68AA8">
+                <input type="text" class="hex-input" value="#B68AA8" maxlength="7">
+                <button class="btn-excluir">X</button>
+            </div>
+            <div class="color-row">
+                <input type="color" class="cor-input" value="#8A72D8">
+                <input type="text" class="hex-input" value="#8A72D8" maxlength="7">
+                <button class="btn-excluir">X</button>
+            </div>
+            <div class="color-row">
+                <input type="color" class="cor-input" value="#9C8CD6">
+                <input type="text" class="hex-input" value="#9C8CD6" maxlength="7">
+                <button class="btn-excluir">X</button>
+            </div>
         </div>
-        <div class="color-row">
-            <input type="color" id="c2" value="#B68AA8">
-            <input type="text" id="hex2" placeholder="#B68AA8" maxlength="7">
-        </div>
-        <div class="color-row">
-            <input type="color" id="c3" value="#8A72D8">
-            <input type="text" id="hex3" placeholder="#8A72D8" maxlength="7">
-        </div>
-        <div class="color-row">
-            <input type="color" id="c4" value="#9C8CD6">
-            <input type="text" id="hex4" placeholder="#9C8CD6" maxlength="7">
-        </div>
+        <button id="btn-add-cor" class="btn-filter" style="margin-top: 15px; width: 100%;">+ Adicionar Cor</button>
     </div>
 
     <!-- Botão de Filtros -->
@@ -144,6 +151,7 @@
     <div id="output-container"></div>
 
     <div class="bottom-actions">
+        <button id="btn-exportar_pantone_chart" class="btn">Pantone Moodboard</button>
         <button id="btn-exportar" class="btn">Baixar Imagem Horizontal</button>
         <button id="btn-stories" class="btn">Baixar Imagem para Stories</button>
         <button id="btn-aleatorio" class="btn">Paleta Aleatória</button>
