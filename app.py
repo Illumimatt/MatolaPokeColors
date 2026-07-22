@@ -5,6 +5,67 @@ import base64, math, random, asyncio, requests, unicodedata, textwrap, heapq
 from pyodide.http import pyfetch
 from pyodide.ffi import create_proxy
 
+# --- INTERNACIONALIZAÇÃO (i18n) ---
+# Fonte única de verdade: TRADUCOES em script.js. O Python só consulta,
+# não duplica o dicionário — assim um texto novo em script.js já fica
+# disponível aqui de graça, sem precisar traduzir em dois lugares.
+def t(chave):
+    """Traduz uma chave usando o idioma ativo (detectado em script.js)."""
+    try:
+        return window.t(chave)
+    except Exception as e:
+        print(f"Erro ao traduzir chave '{chave}': {e}")
+        return chave
+
+# --- PALETA DE CORES CENTRALIZADA ---
+# Fonte única de verdade: as cores moram no :root do style.css.
+# Aqui a gente só LÊ os valores (via getComputedStyle) e guarda em cache —
+# mudar uma cor no CSS reflete automaticamente na interface E nas imagens
+# PNG exportadas, sem precisar tocar em nada aqui.
+_CSS_VARS_CACHE = {}
+
+def cor_css(nome_var, fallback):
+    """Lê uma CSS custom property (ex: '--text-primary-img') do :root.
+    Resultado é cacheado, já que essas cores não mudam em runtime."""
+    if nome_var in _CSS_VARS_CACHE:
+        return _CSS_VARS_CACHE[nome_var]
+    try:
+        valor = window.getComputedStyle(document.documentElement).getPropertyValue(nome_var).strip()
+        resultado = valor if valor else fallback
+    except Exception as e:
+        print(f"Erro ao ler CSS var {nome_var}, usando fallback: {e}")
+        resultado = fallback
+    _CSS_VARS_CACHE[nome_var] = resultado
+    return resultado
+
+def carregar_paleta():
+    """Popula a PALETA a partir das CSS vars. Chamado uma vez no início.
+    Os valores de fallback são os hex que já estavam hardcoded no código
+    antes dessa mudança — garantem que nada quebra mesmo se o CSS falhar
+    ao carregar por algum motivo.
+
+    IMPORTANTE: as chaves "texto_*" e "fundo_imagem" leem as CSS vars
+    --export-*, que são FIXAS (não mudam entre modo claro/escuro) — são
+    usadas só nas imagens PNG exportadas e no popup de salvar do iOS, pra
+    manter a estética da imagem consistente pra quem recebe.
+    Já "ui_secundario" lê --muted-foreground, que SE ADAPTA ao tema do
+    dispositivo — é pra texto que aparece direto na tela (DOM), não em
+    imagem."""
+    return {
+        "fundo_imagem":      cor_css("--export-bg", "#1b1b1b"),
+        "texto_primario":    cor_css("--export-text-primary", "#FFFFF0"),
+        "texto_secundario":  cor_css("--export-text-secondary", "#cbd5e1"),
+        "texto_terciario":   cor_css("--export-text-tertiary", "#94a3b8"),
+        "texto_quaternario": cor_css("--export-text-quaternary", "#64748b"),
+        "texto_destaque":    cor_css("--export-text-highlight", "#e2e8f0"),
+        "ui_secundario":     cor_css("--muted-foreground", "#98a6b3"),
+        "branco":            "white",
+    }
+
+# Preenchida de verdade na primeira chamada de carregar_dados_iniciais(),
+# quando o DOM já está garantidamente pronto pra leitura via getComputedStyle.
+PALETA = {}
+
 # --- VARIÁVEL GLOBAL PARA GUARDAR OS DADOS ---
 SPRITE_CACHE = {}
 COLOR_DATA = {}
@@ -210,7 +271,7 @@ def gerar_paleta(event=None):
         color_text.style.width = "90px"
         color_text.style.background = "transparent"
         color_text.style.border = "none"
-        color_text.style.color = "#cbd5e1"
+        color_text.style.color = PALETA["ui_secundario"]
         color_text.style.fontSize = "16px"
         color_text.style.fontWeight = "600"
         color_text.style.textAlign = "center"
@@ -220,7 +281,7 @@ def gerar_paleta(event=None):
         name_display = document.createElement("div")
         name_display.innerText = nome_cor
         name_display.style.fontSize = "14px"
-        name_display.style.color = "#94a3b8"
+        name_display.style.color = PALETA["ui_secundario"]
         name_display.style.marginTop = "-6px"
         name_display.style.textAlign = "center"
         name_display.style.pointerEvents = "none"
@@ -320,7 +381,7 @@ def gerar_paleta(event=None):
             img.style.height = "96px"
             img.style.cursor = "pointer"
             img.style.imageRendering = "pixelated"
-            img.title = f"{pkmn['name']} (Click para salvar)"
+            img.title = f"{pkmn['name']} {t('tooltip_clique_salvar')}"
             
             img.onmouseover = lambda e: setattr(e.target.style, "transform", "scale(2.0)")
             img.onmouseout = lambda e: setattr(e.target.style, "transform", "scale(1.0)")
@@ -330,7 +391,7 @@ def gerar_paleta(event=None):
             name_tag.style.fontSize = "16px"
             name_tag.style.marginTop = "2px"
             name_tag.style.textAlign = "center"
-            name_tag.style.color = "#cbd5e1" 
+            name_tag.style.color = PALETA["ui_secundario"] 
             
             pkmn_box.appendChild(img)
             pkmn_box.appendChild(name_tag)
@@ -354,7 +415,12 @@ def gerar_paleta_aleatoria(event):
     gerar_paleta(None)
 
 async def carregar_dados_iniciais():
-    global poke_data, COLOR_DATA, BANCO_CORES_PRONTO
+    global poke_data, COLOR_DATA, BANCO_CORES_PRONTO, PALETA
+
+    # Lê a paleta de cores do CSS antes de tudo, já que gerar_paleta()
+    # e as funções de exportação dependem dela pra desenhar textos.
+    PALETA = carregar_paleta()
+
     try:
         response = await pyfetch("pokemon_colors_simple.json")
         if response.status == 200:
@@ -400,7 +466,7 @@ def exportar_paleta_imagem(event):
     espacamento_vertical = 140
     altura_img = 40 + (len(cores_hex) * espacamento_vertical)
     
-    img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
+    img_final = Image.new("RGB", (largura_img, altura_img), PALETA["fundo_imagem"])
     
     draw = ImageDraw.Draw(img_final)
     
@@ -423,16 +489,16 @@ def exportar_paleta_imagem(event):
             radius=8, 
             fill=cor_hex
         )
-        draw.text((42, y_offset + 80), cor_hex.upper(), fill="#cbd5e1", font=font_hex)
+        draw.text((42, y_offset + 80), cor_hex.upper(), fill=PALETA["texto_secundario"], font=font_hex)
         nome_cor = buscar_nome_cor(cor_hex, COLOR_DATA)
         nome_cor_limpo = remover_acentos_para_imagem(nome_cor)
         linhas_cor = textwrap.wrap(nome_cor_limpo, width=14) 
         
         if len(linhas_cor) >= 2:
-            draw.text((42, y_offset + 95), linhas_cor[0], fill="#94a3b8", font=font_hex)
-            draw.text((42, y_offset + 110), linhas_cor[1], fill="#64748b", font=font_hex)
+            draw.text((42, y_offset + 95), linhas_cor[0], fill=PALETA["texto_terciario"], font=font_hex)
+            draw.text((42, y_offset + 110), linhas_cor[1], fill=PALETA["texto_quaternario"], font=font_hex)
         else:
-            draw.text((42, y_offset + 95), nome_cor_limpo, fill="#94a3b8", font=font_hex)
+            draw.text((42, y_offset + 95), nome_cor_limpo, fill=PALETA["texto_terciario"], font=font_hex)
 
         dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
         
@@ -493,20 +559,20 @@ def exportar_paleta_imagem(event):
                     box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
                     w1 = box1[2] - box1[0]
                     x_l1 = x_offset + (largura_sprite // 2) - (w1 // 2)
-                    draw.text((x_l1, y_offset + 95), linha1, fill="#FFFFF0", font=font_pkmn)
+                    draw.text((x_l1, y_offset + 95), linha1, fill=PALETA["texto_primario"], font=font_pkmn)
                     
                     # Centraliza e desenha a segunda linha
                     box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
                     w2 = box2[2] - box2[0]
                     x_l2 = x_offset + (largura_sprite // 2) - (w2 // 2)
-                    draw.text((x_l2, y_offset + 110), linha2, fill="#94a3b8", font=font_pkmn)
+                    draw.text((x_l2, y_offset + 110), linha2, fill=PALETA["texto_terciario"], font=font_pkmn)
                     
                 else:
                     # Se não tiver espaço, desenha em linha única
                     text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
                     largura_texto = text_box[2] - text_box[0]
                     x_texto = x_offset + (largura_sprite // 2) - (largura_texto // 2)
-                    draw.text((x_texto, y_offset + 95), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                    draw.text((x_texto, y_offset + 95), nome_completo, fill=PALETA["texto_primario"], font=font_pkmn)
                     
             except Exception as e:
                 print(f"Erro ao processar {pkmn['name']} na imagem: {e}")
@@ -532,17 +598,17 @@ def exportar_paleta_imagem(event):
                 nova_aba.document.write(f"""
                     <html>
                     <head>
-                        <title>Salvar Paleta</title>
+                        <title>{t('ios_titulo_paleta')}</title>
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                         <style>
-                            body {{ background: #1b1b1b; color: #cbd5e1; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
+                            body {{ background: {PALETA['fundo_imagem']}; color: {PALETA['texto_secundario']}; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
                             img {{ max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 20px; }}
                             p {{ font-size: 14px; letter-spacing: 0.05em; }}
                         </style>
                     </head>
                     <body>
                         <img src="{data_url}" alt="Sua Paleta Pokémon">
-                        <p>Pressione e segure na imagem para "Adicionar às Fotos"</p>
+                        <p>{t('ios_instrucao')}</p>
                     </body>
                     </html>
                 """)
@@ -588,14 +654,14 @@ def exportar_paleta_stories(event):
     # Cálculo da largura total
     largura_img = (padding_lateral * 2) + (len(cores_hex) * largura_coluna) + ((len(cores_hex) - 1) * espacamento_entre)
     
-    img_final = Image.new("RGB", (largura_img, altura_img), "#1b1b1b")
+    img_final = Image.new("RGB", (largura_img, altura_img), PALETA["fundo_imagem"])
     draw = ImageDraw.Draw(img_final)
 
     # 2. TÍTULO CENTRALIZADO DINAMICAMENTE
     # Calcula o tamanho do texto para centralizar na largura_img
-    bbox_titulo = draw.textbbox((0, 0), "MINHA PALETA POKÉMON", font=font_titulo)
+    bbox_titulo = draw.textbbox((0, 0), t('titulo_imagem_horizontal'), font=font_titulo)
     largura_titulo = bbox_titulo[2] - bbox_titulo[0]
-    draw.text(((largura_img - largura_titulo) // 2, 100), "MINHA PALETA POKÉMON", fill="#cbd5e1", font=font_titulo)
+    draw.text(((largura_img - largura_titulo) // 2, 100), t('titulo_imagem_horizontal'), fill=PALETA["texto_secundario"], font=font_titulo)
     
     # 3. LOOP DE COLUNAS
     for idx_coluna, cor_hex in enumerate(cores_hex):
@@ -614,7 +680,7 @@ def exportar_paleta_stories(event):
         box_h = draw.textbbox((0, 0), cor_hex.upper(), font=font_hex)
         w_h = box_h[2] - box_h[0]
         x_text_hex = x_coluna + (largura_coluna // 2) - (w_h // 2)
-        draw.text((x_text_hex, 355), cor_hex.upper(), fill="#94a3b8", font=font_hex)
+        draw.text((x_text_hex, 355), cor_hex.upper(), fill=PALETA["texto_terciario"], font=font_hex)
         
         nome_cor = buscar_nome_cor(cor_hex, COLOR_DATA)
         nome_cor_limpo = remover_acentos_para_imagem(nome_cor)     
@@ -624,17 +690,17 @@ def exportar_paleta_stories(event):
             b_c1 = draw.textbbox((0, 0), linhas_cor[0], font=font_hex)
             w_c1 = b_c1[2] - b_c1[0]
             x_c1 = x_coluna + (largura_coluna // 2) - (w_c1 // 2)
-            draw.text((x_c1, 390), linhas_cor[0], fill="#94a3b8", font=font_hex)
+            draw.text((x_c1, 390), linhas_cor[0], fill=PALETA["texto_terciario"], font=font_hex)
             
             b_c2 = draw.textbbox((0, 0), linhas_cor[1], font=font_hex)
             w_c2 = b_c2[2] - b_c2[0]
             x_c2 = x_coluna + (largura_coluna // 2) - (w_c2 // 2)
-            draw.text((x_c2, 415), linhas_cor[1], fill="#64748b", font=font_hex)
+            draw.text((x_c2, 415), linhas_cor[1], fill=PALETA["texto_quaternario"], font=font_hex)
         else:
             b_c = draw.textbbox((0, 0), nome_cor_limpo, font=font_hex)
             w_c = b_c[2] - b_c[0]
             x_c = x_coluna + (largura_coluna // 2) - (w_c // 2)
-            draw.text((x_c, 390), nome_cor_limpo, fill="#94a3b8", font=font_hex)
+            draw.text((x_c, 390), nome_cor_limpo, fill=PALETA["texto_terciario"], font=font_hex)
 
         dados_filtrados, permite_repetidos = aplicar_filtros_avancados()
 
@@ -697,18 +763,18 @@ def exportar_paleta_stories(event):
                     box1 = draw.textbbox((0, 0), linha1, font=font_pkmn)
                     w1 = box1[2] - box1[0]
                     x_l1 = x_coluna + (largura_coluna // 2) - (w1 // 2)
-                    draw.text((x_l1, y_sprite + 165), linha1, fill="#FFFFF0", font=font_pkmn)
+                    draw.text((x_l1, y_sprite + 165), linha1, fill=PALETA["texto_primario"], font=font_pkmn)
                     
                     box2 = draw.textbbox((0, 0), linha2, font=font_pkmn)
                     w2 = box2[2] - box2[0]
                     x_l2 = x_coluna + (largura_coluna // 2) - (w2 // 2)
-                    draw.text((x_l2, y_sprite + 188), linha2, fill="#94a3b8", font=font_pkmn)
+                    draw.text((x_l2, y_sprite + 188), linha2, fill=PALETA["texto_terciario"], font=font_pkmn)
                 
                 else:
                     text_box = draw.textbbox((0, 0), nome_completo, font=font_pkmn)
                     largura_texto = text_box[2] - text_box[0]
                     x_texto = x_coluna + (largura_coluna // 2) - (largura_texto // 2)
-                    draw.text((x_texto, y_sprite + 165), nome_completo, fill="#FFFFF0", font=font_pkmn)
+                    draw.text((x_texto, y_sprite + 165), nome_completo, fill=PALETA["texto_primario"], font=font_pkmn)
                     
             except Exception as e:
                 print(f"Erro ao desenhar coluna {idx_coluna} no Pokémon {pkmn['name']}: {e}")
@@ -727,17 +793,17 @@ def exportar_paleta_stories(event):
                 nova_aba.document.write(f"""
                     <html>
                     <head>
-                        <title>Salvar Paleta Stories</title>
+                        <title>{t('ios_titulo_stories')}</title>
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                         <style>
-                            body {{ background: #1b1b1b; color: #cbd5e1; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
+                            body {{ background: {PALETA['fundo_imagem']}; color: {PALETA['texto_secundario']}; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
                             img {{ max-width: 100%; max-height: 85vh; height: auto; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.6); margin-bottom: 15px; }}
                             p {{ font-size: 14px; letter-spacing: 0.05em; }}
                         </style>
                     </head>
                     <body>
                         <img src="{data_url}" alt="Sua Paleta Pokémon 9:16">
-                        <p>Pressione e segure na imagem para "Adicionar às Fotos" e postar nos Stories!</p>
+                        <p>{t('ios_instrucao_stories')}</p>
                     </body>
                     </html>
                 """)
@@ -779,7 +845,7 @@ def exportar_pantone_chart(event):
     img_largura = (COLUNAS * LARGURA_CARD) + ((COLUNAS + 1) * PADDING)
     img_altura = (num_linhas * ALTURA_CARD) + ((num_linhas + 1) * PADDING) + 100
     
-    img_final = Image.new("RGB", (img_largura, img_altura), "#1b1b1b")
+    img_final = Image.new("RGB", (img_largura, img_altura), PALETA["fundo_imagem"])
     draw = ImageDraw.Draw(img_final)
 
     draw.text((PADDING, 20), "My Pantone Birth Chart Palette", fill="white", font=font_titulo)
@@ -807,7 +873,7 @@ def exportar_pantone_chart(event):
             draw.text((x_bloco + 20, y_bloco + 20), info['cat'].upper(), fill="white", font=font_pkmn)
             draw.text((x_bloco + 20, y_bloco + 50), info['name'], fill="white", font=font_titulo)
             draw.text((x_bloco + 20, y_bloco + 320), hex_chave, fill="white", font=font_hex)
-            draw.text((x_bloco + 20, y_bloco + 350), f"Pantone match: {info['code']}", fill="white", font=font_pkmn)
+            draw.text((x_bloco + 20, y_bloco + 350), f"{t('pantone_match_prefixo')}{info['code']}", fill="white", font=font_pkmn)
             
         else:
             # Caso 2: Cor customizada (reaproveita buscar_nome_cor, que já usa
@@ -815,7 +881,7 @@ def exportar_pantone_chart(event):
             nome_aproximado = buscar_nome_cor(cor_hex, COLOR_DATA)
 
             # Imprime Categoria Fixa
-            draw.text((x_bloco + 20, y_bloco + 20), "PALETTE", fill="white", font=font_pkmn)
+            draw.text((x_bloco + 20, y_bloco + 20), t('categoria_paleta'), fill="white", font=font_pkmn)
             
             # Limpa acentos e aplica a quebra esperta de texto
             import textwrap
@@ -824,7 +890,7 @@ def exportar_pantone_chart(event):
             
             if len(linhas_cor) >= 2:
                 draw.text((x_bloco + 20, y_bloco + 50), linhas_cor[0], fill="white", font=font_titulo)
-                draw.text((x_bloco + 20, y_bloco + 95), linhas_cor[1], fill="#e2e8f0", font=font_titulo)
+                draw.text((x_bloco + 20, y_bloco + 95), linhas_cor[1], fill=PALETA["texto_destaque"], font=font_titulo)
             else:
                 draw.text((x_bloco + 20, y_bloco + 50), nome_limpo, fill="white", font=font_titulo)
                 
@@ -870,17 +936,17 @@ def exportar_pantone_chart(event):
                 nova_aba.document.write(f"""
                     <html>
                     <head>
-                        <title>Salvar Moodboard</title>
+                        <title>{t('ios_titulo_moodboard')}</title>
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                         <style>
-                            body {{ background: #1b1b1b; color: #cbd5e1; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
+                            body {{ background: {PALETA['fundo_imagem']}; color: {PALETA['texto_secundario']}; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; text-align: center; padding: 20px; box-sizing: border-box; }}
                             img {{ max-width: 100%; max-height: 85vh; height: auto; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.6); margin-bottom: 15px; }}
                             p {{ font-size: 14px; letter-spacing: 0.05em; }}
                         </style>
                     </head>
                     <body>
                         <img src="{data_url}" alt="Sua Moodboard Pokémon 9:16">
-                        <p>Pressione e segure na imagem para "Adicionar às Fotos"</p>
+                        <p>{t('ios_instrucao')}</p>
                     </body>
                     </html>
                 """)

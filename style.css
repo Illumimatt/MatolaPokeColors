@@ -1,5 +1,8 @@
+/* --- MAPEAMENTO DO TEMA POKÉMON --- */
 :root {
-    /* Cores padrão/iniciais (Serão sobrescritas dinamicamente pelo app.py) */
+    /* Cores da INTERFACE — se adaptam ao modo claro/escuro do dispositivo
+       (ver bloco @media (prefers-color-scheme: light) mais abaixo).
+       Lidas dinamicamente pelo app.py via getComputedStyle. */
     --background: #14141a;
     --card: #1b1b27;
     --border: #2d2d43;
@@ -13,11 +16,46 @@
     
     --btn-random: #7d7d9b;
     --btn-export: #ffd91a;
-    --btn-export-pantone: #050505; 
+
+    /* Texto sobre botões de cor sólida (fundo do botão não muda com o
+       tema, então o texto também fica fixo pra sempre ter contraste) */
+    --text-on-accent: #FFFFF0;
+
+    /* Paleta usada SÓ nas imagens PNG exportadas pelo app.py. Fica fixa
+       de propósito — não muda com o tema do dispositivo — pra quem recebe
+       a imagem exportada (ex: no Instagram) sempre ver a mesma estética,
+       independente do modo claro/escuro de quem gerou. */
+    --export-bg: #1b1b1b;
+    --export-text-primary: #FFFFF0;    /* nomes de Pokémon nas imagens (marfim) */
+    --export-text-secondary: #cbd5e1;  /* hex da cor nas imagens */
+    --export-text-tertiary: #94a3b8;   /* legendas menores, nomes de cor */
+    --export-text-quaternary: #64748b; /* segunda linha de nomes quebrados */
+    --export-text-highlight: #e2e8f0;  /* linha de destaque nos cards Pantone */
     
     --radius: 0.625rem;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
     --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.4);
+}
+
+/* --- MODO CLARO ---
+   Ativado automaticamente quando o SISTEMA OPERACIONAL do usuário está em
+   modo claro. Só redefine as variáveis de INTERFACE — as de --export-*
+   ficam de fora de propósito, pra manter a imagem exportada consistente. */
+@media (prefers-color-scheme: light) {
+    :root {
+        --background: #f4f4f6;
+        --card: #ffffff;
+        --border: #dde1e8;
+        --input-bg: #eef1f5;
+
+        --foreground: #14141a;
+        --muted-foreground: #5b6472;
+
+        --primary-foreground: #0a0a0a;
+        /* --primary, --btn-random, --btn-export e --text-on-accent ficam
+           iguais nos dois temas: são cores de "marca"/acento fixas, feitas
+           pra funcionar tanto num fundo claro quanto escuro. */
+    }
 }
 
 /* Suporte opcional se estiver usando o motor do Tailwind v4 em paralelo */
@@ -57,6 +95,23 @@ body {
     align-items: center;
     min-height: 100vh;
 }
+
+.btn-idioma {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.95rem;
+    box-shadow: var(--shadow-sm);
+}
+.btn-idioma:hover { background: var(--border); }
 
 h1 {
     font-size: 3rem;
@@ -108,7 +163,7 @@ h1 {
     padding-top: 12px;
     border-top: 1px solid var(--border);
     font-size: 1rem;
-    color: #cbd5e1;
+    color: var(--muted-foreground);
     line-height: 1.5;
 }
 
@@ -248,7 +303,7 @@ input[type="text"]:focus {
 .checkbox-label {
     display: flex;
     align-items: center;
-    color: #cbd5e1;
+    color: var(--muted-foreground);
     font-size: 1.1rem;
     cursor: pointer;
 }
@@ -299,7 +354,7 @@ input[type="text"]:focus {
 
 #output-container span {
     font-weight: 600;
-    color: #FFFFF0 !important;
+    color: var(--foreground) !important;
     text-transform: capitalize;
     letter-spacing: -0.01em;
 }
@@ -316,7 +371,7 @@ input[type="text"]:focus {
 .btn {
     width: 100%;
     padding: 14px;
-    color: #FFFFF0;
+    color: var(--text-on-accent);
     font-size: 1.25rem;
     font-weight: 600;
     border: none;
@@ -331,10 +386,9 @@ input[type="text"]:focus {
 .btn:hover { transform: scale(1.01); }
 .btn:active { transform: scale(0.99); }
 
-#btn-exportar_pantone_chart { background-color: var(--btn-export-pantone); color: #FFFFF0; }
 #btn-exportar { background-color: var(--btn-export); color: var(--primary-foreground); }
 #btn-exportar:hover { filter: brightness(1.1); }
-#btn-stories { background-color: var(--btn-random); color: #FFFFF0; }
+#btn-stories { background-color: var(--btn-random); color: var(--text-on-accent); }
 #btn-stories:hover { filter: brightness(1.1); }
 #btn-aleatorio { background-color: #1e293b; border: 1px solid var(--border); }
 #btn-aleatorio:hover { background-color: #334155; }

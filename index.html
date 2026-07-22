@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custmoziador de Paleta Pokémon</title>
+    <title>Customizador de Paleta Pokémon</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -13,9 +13,12 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Customizador de Paleta Pokémon</h1>
+    <!-- Botão de troca de idioma (texto definido via JS, com base no idioma detectado) -->
+    <button id="btn-idioma" class="btn-idioma" type="button">🌐</button>
+
+    <h1 data-i18n="titulo">Customizador de Paleta Pokémon</h1>
     
-    <p class="subtitle">
+    <p class="subtitle" data-i18n-html="subtitulo_html">
         Insira as suas cores do 
         <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">
            Pantone Birth Chart
@@ -24,14 +27,14 @@
     </p>
     
     <details class="help-section">
-        <summary class="help-summary">
+        <summary class="help-summary" data-i18n="ajuda_resumo">
             Precisa de ajuda? Veja como pegar as cores
         </summary>
         <div class="help-content">
-            <p>1. Abra o <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> em uma nova aba.</p>
-            <p>2. Insira sua data, hora e local de nascimento para gerar o seu gráfico de cores Pantone.</p>
-            <p>3. Copie as tags <b>HEX</b> (os códigos com #, basta clicar nela!) geradas para o seu perfil.</p>
-            <p>4. Cole as cores aqui no nosso gerador e veja a mágica acontecer!</p>
+            <p data-i18n-html="ajuda_passo1_html">1. Abra o <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> em uma nova aba.</p>
+            <p data-i18n="ajuda_passo2">2. Insira sua data, hora e local de nascimento para gerar o seu gráfico de cores Pantone.</p>
+            <p data-i18n-html="ajuda_passo3_html">3. Copie as tags <b>HEX</b> (os códigos com #, basta clicar nela!) geradas para o seu perfil.</p>
+            <p data-i18n="ajuda_passo4">4. Cole as cores aqui no nosso gerador e veja a mágica acontecer!</p>
         </div>
     </details>
 
@@ -39,82 +42,82 @@
         <div id="lista-cores">
             <div class="color-row">
                 <input type="color" class="cor-input" value="#7A59C7">
-                <input type="text" class="hex-input" value="#7A59C7" maxlength="7">
+                <input type="text" class="hex-input" value="#7A59C7" maxlength="8">
                 <button class="btn-excluir">X</button>
             </div>
             <div class="color-row">
                 <input type="color" class="cor-input" value="#B68AA8">
-                <input type="text" class="hex-input" value="#B68AA8" maxlength="7">
+                <input type="text" class="hex-input" value="#B68AA8" maxlength="8">
                 <button class="btn-excluir">X</button>
             </div>
             <div class="color-row">
                 <input type="color" class="cor-input" value="#8A72D8">
-                <input type="text" class="hex-input" value="#8A72D8" maxlength="7">
+                <input type="text" class="hex-input" value="#8A72D8" maxlength="8">
                 <button class="btn-excluir">X</button>
             </div>
             <div class="color-row">
                 <input type="color" class="cor-input" value="#9C8CD6">
-                <input type="text" class="hex-input" value="#9C8CD6" maxlength="7">
+                <input type="text" class="hex-input" value="#9C8CD6" maxlength="8">
                 <button class="btn-excluir">X</button>
             </div>
         </div>
-        <button id="btn-add-cor" class="btn-filter" style="margin-top: 15px; width: 100%;">+ Adicionar Cor</button>
+        <button id="btn-add-cor" class="btn-filter" style="margin-top: 15px; width: 100%;" data-i18n="btn_add_cor">+ Adicionar Cor</button>
     </div>
 
     <!-- Botão de Filtros -->
     <div class="filter-container">
-        <button id="btn-abrir-filtros" class="btn-filter">Filtros de Pokémon</button>
+        <button id="btn-abrir-filtros" class="btn-filter" data-i18n="btn_abrir_filtros">Filtros de Pokémon</button>
     </div>
 
  <!-- Modal de Filtros -->
     <div id="modal-overlay" class="modal-overlay">
         <div class="modal-box">
-            <h3 class="modal-title">Filtros Avançados</h3>
+            <h3 class="modal-title" data-i18n="modal_titulo">Filtros Avançados</h3>
             
             <!-- Grupo 1: Regras da Paleta -->
             <div class="filter-section">
-                <h4>Regras do Gerador</h4>
+                <h4 data-i18n="filtro_secao_regras">Regras do Gerador</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label" title="Permite que o mesmo Pokémon apareça mais de uma vez">
-                        <input type="checkbox" id="chk-repetidos">Permitir Repetidos
+                    <label class="checkbox-label" data-i18n-title="chk_repetidos_title" title="Permite que o mesmo Pokémon apareça mais de uma vez">
+                        <input type="checkbox" id="chk-repetidos"><span data-i18n="chk_repetidos_label">Permitir Repetidos</span>
                     </label>
                     <label class="checkbox-label">
-                        <input type="checkbox" id="chk-apenas-shiny">Apenas Shinies
+                        <input type="checkbox" id="chk-apenas-shiny"><span data-i18n="chk_apenas_shiny">Apenas Shinies</span>
                     </label>
                     <label class="checkbox-label">
-                        <input type="checkbox" id="chk-sem-shiny">Ocultar Shinies
+                        <input type="checkbox" id="chk-sem-shiny"><span data-i18n="chk_sem_shiny">Ocultar Shinies</span>
                     </label>
                 </div>
             </div>
 
             <!-- Grupo 2: Raridade e Biologia -->
             <div class="filter-section">
-                <h4>Biologia e Raridade</h4>
+                <h4 data-i18n="filtro_secao_biologia">Biologia e Raridade</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-1" value="true"> Estágio Inicial</label>
-                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-2" value="true"> Estágio Intermediário</label>
-                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-final" value="true">Estágio Final</label>
-                    <label class="checkbox-label"><input type="checkbox" id="chk-megas" value="true">Mega Evoluções</label>
-                    <label class="checkbox-label"><input type="checkbox" id="chk-lendarios-miticos" value="true">Lendários e Míticos</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-1" value="true"> <span data-i18n="chk_estagio_inicial">Estágio Inicial</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-2" value="true"> <span data-i18n="chk_estagio_intermediario">Estágio Intermediário</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-estagio-final" value="true"><span data-i18n="chk_estagio_final">Estágio Final</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-megas" value="true"><span data-i18n="chk_megas">Mega Evoluções</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk-lendarios-miticos" value="true"><span data-i18n="chk_lendarios_miticos">Lendários e Míticos</span></label>
                 </div>
             </div>
 
             <!-- Grupo 3: Ecossistema / Habitat -->
             <div class="filter-section">
-                <h4>Habitat</h4>
+                <h4 data-i18n="filtro_secao_habitat">Habitat</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="forest">Floresta</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="sea">Mar</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="cave">Caverna</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="mountain">Montanha</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="urban">Urbano</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="grassland">Campos</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="forest"><span data-i18n="habitat_floresta">Floresta</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="sea"><span data-i18n="habitat_mar">Mar</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="cave"><span data-i18n="habitat_caverna">Caverna</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="mountain"><span data-i18n="habitat_montanha">Montanha</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="urban"><span data-i18n="habitat_urbano">Urbano</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-habitat" value="grassland"><span data-i18n="habitat_campos">Campos</span></label>
                 </div>
             </div>
 
-            <!-- Grupo 4: Gerações -->
+            <!-- Grupo 4: Gerações (nomes de região são substantivos próprios, iguais nos dois idiomas) -->
             <div class="filter-section">
-                <h4>Região / Geração</h4>
+                <h4 data-i18n="filtro_secao_geracao">Região / Geração</h4>
                 <div class="filter-grid">
                     <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-i">Kanto</label>
                     <label class="checkbox-label"><input type="checkbox" class="chk-gen" value="generation-ii">Johto</label>
@@ -130,20 +133,20 @@
 
             <!-- Grupo 5: Tipos -->
             <div class="filter-section" style="margin-bottom: 25px;">
-                <h4>Tipos</h4>
+                <h4 data-i18n="filtro_secao_tipos">Tipos</h4>
                 <div class="filter-grid">
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fire">Fogo</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="water">Água</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="grass">Planta</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="electric">Elétrico</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="psychic">Psíquico</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dark">Sombrio</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fairy">Fada</label>
-                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dragon">Dragão</label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fire"><span data-i18n="tipo_fogo">Fogo</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="water"><span data-i18n="tipo_agua">Água</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="grass"><span data-i18n="tipo_planta">Planta</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="electric"><span data-i18n="tipo_eletrico">Elétrico</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="psychic"><span data-i18n="tipo_psiquico">Psíquico</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dark"><span data-i18n="tipo_sombrio">Sombrio</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="fairy"><span data-i18n="tipo_fada">Fada</span></label>
+                    <label class="checkbox-label"><input type="checkbox" class="chk-type" value="dragon"><span data-i18n="tipo_dragao">Dragão</span></label>
                 </div>
             </div>
             
-            <button id="btn-fechar-filtros" class="btn-close-modal">Aplicar e Voltar</button>
+            <button id="btn-fechar-filtros" class="btn-close-modal" data-i18n="btn_fechar_filtros">Aplicar e Voltar</button>
         </div>
     </div>
 
@@ -151,10 +154,10 @@
     <div id="output-container"></div>
 
     <div class="bottom-actions">
-        <button id="btn-exportar_pantone_chart" class="btn">Pantone Moodboard</button>
-        <button id="btn-exportar" class="btn">Baixar Imagem Horizontal</button>
-        <button id="btn-stories" class="btn">Baixar Imagem para Stories</button>
-        <button id="btn-aleatorio" class="btn">Paleta Aleatória</button>
+        <button id="btn-exportar_pantone_chart" class="btn" data-i18n="btn_exportar_pantone">Pantone Moodboard</button>
+        <button id="btn-exportar" class="btn" data-i18n="btn_exportar_horizontal">Baixar Imagem Horizontal</button>
+        <button id="btn-stories" class="btn" data-i18n="btn_exportar_stories">Baixar Imagem para Stories</button>
+        <button id="btn-aleatorio" class="btn" data-i18n="btn_aleatorio">Paleta Aleatória</button>
     </div>
 
     <!-- Chama o arquivo JS externo da interface -->

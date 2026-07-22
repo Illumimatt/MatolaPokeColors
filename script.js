@@ -1,4 +1,185 @@
+// ==========================================
+// 0. INTERNACIONALIZAÇÃO (i18n)
+// ==========================================
+// Fonte única de verdade das traduções. O app.py também lê daqui (via
+// window.t()), pra não duplicar texto entre JS e Python.
+// Pra adicionar um novo idioma: copie o bloco "en" inteiro, traduza os
+// valores e adicione a chave (ex: "es") aqui embaixo.
+const TRADUCOES = {
+    "pt-br": {
+        titulo: "Customizador de Paleta Pokémon",
+        subtitulo_html: 'Insira as suas cores do <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> para encontrar seus Pokémon ideais',
+        ajuda_resumo: "Precisa de ajuda? Veja como pegar as cores",
+        ajuda_passo1_html: '1. Abra o <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> em uma nova aba.',
+        ajuda_passo2: "2. Insira sua data, hora e local de nascimento para gerar o seu gráfico de cores Pantone.",
+        ajuda_passo3_html: "3. Copie as tags <b>HEX</b> (os códigos com #, basta clicar nela!) geradas para o seu perfil.",
+        ajuda_passo4: "4. Cole as cores aqui no nosso gerador e veja a mágica acontecer!",
+        btn_add_cor: "+ Adicionar Cor",
+        btn_abrir_filtros: "Filtros de Pokémon",
+        modal_titulo: "Filtros Avançados",
+        filtro_secao_regras: "Regras do Gerador",
+        filtro_secao_biologia: "Biologia e Raridade",
+        filtro_secao_habitat: "Habitat",
+        filtro_secao_geracao: "Região / Geração",
+        filtro_secao_tipos: "Tipos",
+        chk_repetidos_label: "Permitir Repetidos",
+        chk_repetidos_title: "Permite que o mesmo Pokémon apareça mais de uma vez",
+        chk_apenas_shiny: "Apenas Shinies",
+        chk_sem_shiny: "Ocultar Shinies",
+        chk_estagio_inicial: "Estágio Inicial",
+        chk_estagio_intermediario: "Estágio Intermediário",
+        chk_estagio_final: "Estágio Final",
+        chk_megas: "Mega Evoluções",
+        chk_lendarios_miticos: "Lendários e Míticos",
+        habitat_floresta: "Floresta",
+        habitat_mar: "Mar",
+        habitat_caverna: "Caverna",
+        habitat_montanha: "Montanha",
+        habitat_urbano: "Urbano",
+        habitat_campos: "Campos",
+        tipo_fogo: "Fogo",
+        tipo_agua: "Água",
+        tipo_planta: "Planta",
+        tipo_eletrico: "Elétrico",
+        tipo_psiquico: "Psíquico",
+        tipo_sombrio: "Sombrio",
+        tipo_fada: "Fada",
+        tipo_dragao: "Dragão",
+        btn_fechar_filtros: "Aplicar e Voltar",
+        btn_exportar_pantone: "Pantone Moodboard",
+        btn_exportar_horizontal: "Baixar Imagem Horizontal",
+        btn_exportar_stories: "Baixar Imagem para Stories",
+        btn_aleatorio: "Paleta Aleatória",
+        idioma_alternar: "English",
+
+        // Usadas pelo app.py (imagens exportadas e pop-ups do iOS)
+        categoria_paleta: "PALETTE",
+        pantone_match_prefixo: "Pantone match: ",
+        titulo_imagem_horizontal: "MINHA PALETA POKÉMON",
+        tooltip_clique_salvar: "(Clique para salvar)",
+        ios_titulo_paleta: "Salvar Paleta",
+        ios_titulo_stories: "Salvar Paleta Stories",
+        ios_titulo_moodboard: "Salvar Moodboard",
+        ios_instrucao: 'Pressione e segure na imagem para "Adicionar às Fotos"',
+        ios_instrucao_stories: 'Pressione e segure na imagem para "Adicionar às Fotos" e postar nos Stories!',
+    },
+    "en": {
+        titulo: "Pokémon Palette Customizer",
+        subtitulo_html: 'Enter your colors from the <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> to find your ideal Pokémon',
+        ajuda_resumo: "Need help? See how to get your colors",
+        ajuda_passo1_html: '1. Open the <a href="https://pantonecolors.net/pantone-birth-chart/" target="_blank" rel="noopener noreferrer" class="link-destaque">Pantone Birth Chart</a> in a new tab.',
+        ajuda_passo2: "2. Enter your birth date, time and place to generate your Pantone color chart.",
+        ajuda_passo3_html: "3. Copy the <b>HEX</b> tags (the codes with #, just click on it!) generated for your profile.",
+        ajuda_passo4: "4. Paste the colors here in our generator and watch the magic happen!",
+        btn_add_cor: "+ Add Color",
+        btn_abrir_filtros: "Pokémon Filters",
+        modal_titulo: "Advanced Filters",
+        filtro_secao_regras: "Generator Rules",
+        filtro_secao_biologia: "Biology & Rarity",
+        filtro_secao_habitat: "Habitat",
+        filtro_secao_geracao: "Region / Generation",
+        filtro_secao_tipos: "Types",
+        chk_repetidos_label: "Allow Repeats",
+        chk_repetidos_title: "Allows the same Pokémon to appear more than once",
+        chk_apenas_shiny: "Shinies Only",
+        chk_sem_shiny: "Hide Shinies",
+        chk_estagio_inicial: "Base Stage",
+        chk_estagio_intermediario: "Middle Stage",
+        chk_estagio_final: "Final Stage",
+        chk_megas: "Mega Evolutions",
+        chk_lendarios_miticos: "Legendaries & Mythicals",
+        habitat_floresta: "Forest",
+        habitat_mar: "Sea",
+        habitat_caverna: "Cave",
+        habitat_montanha: "Mountain",
+        habitat_urbano: "Urban",
+        habitat_campos: "Grassland",
+        tipo_fogo: "Fire",
+        tipo_agua: "Water",
+        tipo_planta: "Grass",
+        tipo_eletrico: "Electric",
+        tipo_psiquico: "Psychic",
+        tipo_sombrio: "Dark",
+        tipo_fada: "Fairy",
+        tipo_dragao: "Dragon",
+        btn_fechar_filtros: "Apply and Close",
+        btn_exportar_pantone: "Pantone Moodboard",
+        btn_exportar_horizontal: "Download Horizontal Image",
+        btn_exportar_stories: "Download Stories Image",
+        btn_aleatorio: "Random Palette",
+        idioma_alternar: "Português",
+
+        // Used by app.py (exported images and iOS pop-ups)
+        categoria_paleta: "PALETTE",
+        pantone_match_prefixo: "Pantone match: ",
+        titulo_imagem_horizontal: "MY POKÉMON PALETTE",
+        tooltip_clique_salvar: "(Click to save)",
+        ios_titulo_paleta: "Save Palette",
+        ios_titulo_stories: "Save Stories Palette",
+        ios_titulo_moodboard: "Save Moodboard",
+        ios_instrucao: 'Press and hold the image to "Add to Photos"',
+        ios_instrucao_stories: 'Press and hold the image to "Add to Photos" and post it to your Stories!',
+    }
+};
+
+const IDIOMA_PADRAO = "pt-br";
+
+// Detecta o idioma ativo: preferência salva manualmente > idioma do
+// navegador > português como padrão.
+function idiomaAtual() {
+    const salvo = localStorage.getItem("idioma");
+    if (salvo && TRADUCOES[salvo]) return salvo;
+
+    const navegador = (navigator.language || "").toLowerCase();
+    if (navegador.startsWith("pt")) return "pt-br";
+    return "en";
+}
+
+// Tradução de uma chave no idioma ativo, com fallback pro português e,
+// em último caso, pra própria chave (nunca quebra a tela por falta de chave).
+window.t = function(chave) {
+    const idioma = idiomaAtual();
+    const dicionario = TRADUCOES[idioma] || TRADUCOES[IDIOMA_PADRAO];
+    return dicionario[chave] ?? TRADUCOES[IDIOMA_PADRAO][chave] ?? chave;
+};
+
+// Aplica as traduções em todos os elementos marcados no HTML:
+// - data-i18n="chave"       -> define o textContent
+// - data-i18n-html="chave"  -> define o innerHTML (pra textos com <a>/<b> dentro)
+// - data-i18n-title="chave" -> define o atributo title (tooltip)
+function aplicarTraducoes() {
+    document.documentElement.lang = idiomaAtual();
+    document.title = window.t("titulo");
+
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+        el.textContent = window.t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+        el.innerHTML = window.t(el.dataset.i18nHtml);
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+        el.title = window.t(el.dataset.i18nTitle);
+    });
+
+    const btnIdioma = document.getElementById("btn-idioma");
+    if (btnIdioma) btnIdioma.textContent = "🌐 " + window.t("idioma_alternar");
+}
+
 document.addEventListener("DOMContentLoaded", function() {
+    aplicarTraducoes();
+
+    // Botão de troca de idioma: salva a escolha e recarrega a página, pra
+    // garantir que o texto gerado pelo Python (imagens, pop-ups) também
+    // já nasça no idioma certo na próxima renderização.
+    const btnIdioma = document.getElementById("btn-idioma");
+    if (btnIdioma) {
+        btnIdioma.addEventListener("click", () => {
+            const proximo = idiomaAtual() === "pt-br" ? "en" : "pt-br";
+            localStorage.setItem("idioma", proximo);
+            window.location.reload();
+        });
+    }
+
     // ==========================================
     // 1. LÓGICA DO MODAL DE FILTROS
     // ==========================================
