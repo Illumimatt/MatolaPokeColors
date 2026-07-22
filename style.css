@@ -13,12 +13,11 @@
     
     --primary: #ffd91a;
     --primary-foreground: #0a0a0a;
-    
+
+    --btn-pantone: #020202;
     --btn-random: #7d7d9b;
     --btn-export: #ffd91a;
 
-    /* Texto sobre botões de cor sólida (fundo do botão não muda com o
-       tema, então o texto também fica fixo pra sempre ter contraste) */
     --text-on-accent: #FFFFF0;
 
     /* Paleta usada SÓ nas imagens PNG exportadas pelo app.py. Fica fixa
@@ -52,6 +51,7 @@
         --muted-foreground: #5b6472;
 
         --primary-foreground: #0a0a0a;
+        --primary: #020202;
         /* --primary, --btn-random, --btn-export e --text-on-accent ficam
            iguais nos dois temas: são cores de "marca"/acento fixas, feitas
            pra funcionar tanto num fundo claro quanto escuro. */
@@ -386,6 +386,8 @@ input[type="text"]:focus {
 .btn:hover { transform: scale(1.01); }
 .btn:active { transform: scale(0.99); }
 
+#btn-exportar_pantone_chart { background-color: var(--btn-pantone); color: var(--text-on-accent); }
+#btn-exportar_pantone_chart:hover { filter: brightness(1.1); }
 #btn-exportar { background-color: var(--btn-export); color: var(--primary-foreground); }
 #btn-exportar:hover { filter: brightness(1.1); }
 #btn-stories { background-color: var(--btn-random); color: var(--text-on-accent); }
