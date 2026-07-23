@@ -17,6 +17,29 @@ def t(chave):
         print(f"Erro ao traduzir chave '{chave}': {e}")
         return chave
 
+# --- TEXTOS FIXOS DAS IMAGENS EXPORTADAS (sempre em inglês) ---
+# Mesmo raciocínio do --export-bg no CSS: a imagem baixada/compartilhada
+# deve ficar igual pra todo mundo, independente do idioma da interface de
+# quem a gerou — e nomes de arquivo em inglês funcionam melhor universalmente
+# (hashtags, buscas, etc). NÃO usam t()/TRADUCOES de propósito.
+TEXTO_TITULO_PALETA = "MY POKÉMON PALETTE"
+TEXTO_TITULO_PANTONE = "MY POKÉMON PANTONE BIRTH CHART PALETTE"
+TEXTO_CATEGORIA_PALETA = "PALETTE"
+TEXTO_PANTONE_MATCH_PREFIXO = "Pantone match: "
+TEXTO_LINK_SITE = "illumimatt.github.io/MatolaPokeColors/"
+
+# NOTA: os textos dos pop-ups do iOS (título da aba, instrução de "segure
+# pra salvar") NÃO ficam fixos — são a tela que a PESSOA vê enquanto salva,
+# não pixels da imagem em si, então usam t() e seguem o idioma do site.
+
+def desenhar_link_site(draw, largura_img, y, fonte, cor):
+    """Desenha o link do site centralizado horizontalmente. Reaproveitado
+    nas 3 funções de exportação de imagem."""
+    bbox = draw.textbbox((0, 0), TEXTO_LINK_SITE, font=fonte)
+    largura_texto = bbox[2] - bbox[0]
+    x = (largura_img - largura_texto) // 2
+    draw.text((x, y), TEXTO_LINK_SITE, fill=cor, font=fonte)
+
 # --- PALETA DE CORES CENTRALIZADA ---
 # Fonte única de verdade: as cores moram no :root do style.css.
 # Aqui a gente só LÊ os valores (via getComputedStyle) e guarda em cache —
@@ -464,7 +487,9 @@ def exportar_paleta_imagem(event):
 
     largura_img = 1100
     espacamento_vertical = 140
-    altura_img = 40 + (len(cores_hex) * espacamento_vertical)
+    ALTURA_TITULO = 110   # espaço reservado pro título no topo
+    ALTURA_RODAPE = 50    # espaço reservado pro link do site embaixo
+    altura_img = ALTURA_TITULO + (len(cores_hex) * espacamento_vertical) + ALTURA_RODAPE
     
     img_final = Image.new("RGB", (largura_img, altura_img), PALETA["fundo_imagem"])
     
@@ -474,12 +499,19 @@ def exportar_paleta_imagem(event):
         caminho_fonte = "fonts/VCR_OSD_MONO_1.001.ttf"
         font_hex = ImageFont.truetype(caminho_fonte, size=16)
         font_pkmn = ImageFont.truetype(caminho_fonte, size=16)
+        font_titulo = ImageFont.truetype(caminho_fonte, size=30)
     except Exception as e:
         print(f"Erro ao carregar fonte do diretório, usando a padrão: {e}")
         font_hex = ImageFont.load_default()
         font_pkmn = ImageFont.load_default()
+        font_titulo = ImageFont.load_default()
+
+    # Título centralizado no topo (mesmo texto usado na imagem vertical)
+    bbox_titulo = draw.textbbox((0, 0), TEXTO_TITULO_PALETA, font=font_titulo)
+    largura_titulo = bbox_titulo[2] - bbox_titulo[0]
+    draw.text(((largura_img - largura_titulo) // 2, 30), TEXTO_TITULO_PALETA, fill=PALETA["texto_secundario"], font=font_titulo)
     
-    y_offset = 40
+    y_offset = ALTURA_TITULO
 
     for cor_hex in cores_hex:
         cor_lab = rgb_to_lab(*parse_input_color(cor_hex))
@@ -581,6 +613,9 @@ def exportar_paleta_imagem(event):
             
         y_offset += espacamento_vertical
 
+    # Link do site, centralizado no rodapé
+    desenhar_link_site(draw, largura_img, y_offset + 12, font_hex, PALETA["texto_terciario"])
+
     try:
         buffered = BytesIO()
         img_final.save(buffered, format="PNG")
@@ -607,7 +642,7 @@ def exportar_paleta_imagem(event):
                         </style>
                     </head>
                     <body>
-                        <img src="{data_url}" alt="Sua Paleta Pokémon">
+                        <img src="{data_url}" alt="Your Pokémon Palette">
                         <p>{t('ios_instrucao')}</p>
                     </body>
                     </html>
@@ -620,7 +655,7 @@ def exportar_paleta_imagem(event):
             # Comportamento normal de download direto para Desktop e Android
             a = document.createElement("a")
             a.href = data_url
-            a.download = "minha-paleta-pokemon.png"
+            a.download = "pokemon-palette.png"
             a.click()
 
     except Exception as e:
@@ -659,9 +694,9 @@ def exportar_paleta_stories(event):
 
     # 2. TÍTULO CENTRALIZADO DINAMICAMENTE
     # Calcula o tamanho do texto para centralizar na largura_img
-    bbox_titulo = draw.textbbox((0, 0), t('titulo_imagem_horizontal'), font=font_titulo)
+    bbox_titulo = draw.textbbox((0, 0), TEXTO_TITULO_PALETA, font=font_titulo)
     largura_titulo = bbox_titulo[2] - bbox_titulo[0]
-    draw.text(((largura_img - largura_titulo) // 2, 100), t('titulo_imagem_horizontal'), fill=PALETA["texto_secundario"], font=font_titulo)
+    draw.text(((largura_img - largura_titulo) // 2, 100), TEXTO_TITULO_PALETA, fill=PALETA["texto_secundario"], font=font_titulo)
     
     # 3. LOOP DE COLUNAS
     for idx_coluna, cor_hex in enumerate(cores_hex):
@@ -778,6 +813,10 @@ def exportar_paleta_stories(event):
                     
             except Exception as e:
                 print(f"Erro ao desenhar coluna {idx_coluna} no Pokémon {pkmn['name']}: {e}")
+
+    # Link do site, centralizado no rodapé (a área de baixo já sobra livre)
+    desenhar_link_site(draw, largura_img, altura_img - 60, font_hex, PALETA["texto_terciario"])
+
     # Fluxo de exportação (Web / iOS)
     try:
         buffered = BytesIO()
@@ -802,7 +841,7 @@ def exportar_paleta_stories(event):
                         </style>
                     </head>
                     <body>
-                        <img src="{data_url}" alt="Sua Paleta Pokémon 9:16">
+                        <img src="{data_url}" alt="Your Pokémon Palette 9:16">
                         <p>{t('ios_instrucao_stories')}</p>
                     </body>
                     </html>
@@ -811,7 +850,7 @@ def exportar_paleta_stories(event):
         else:
             a = document.createElement("a")
             a.href = data_url
-            a.download = "minha-paleta-pokemon-stories.png"
+            a.download = "pokemon-palette-stories.png"
             a.click()
 
     except Exception as e:
@@ -839,16 +878,17 @@ def exportar_pantone_chart(event):
     ALTURA_CARD = 420
     PADDING = 40
     COLUNAS = 2
+    ALTURA_RODAPE = 50  # espaço extra reservado pro link do site
     num_cores = len(cores_hex)
     num_linhas = math.ceil(num_cores / COLUNAS)
     
     img_largura = (COLUNAS * LARGURA_CARD) + ((COLUNAS + 1) * PADDING)
-    img_altura = (num_linhas * ALTURA_CARD) + ((num_linhas + 1) * PADDING) + 100
+    img_altura = (num_linhas * ALTURA_CARD) + ((num_linhas + 1) * PADDING) + 100 + ALTURA_RODAPE
     
     img_final = Image.new("RGB", (img_largura, img_altura), PALETA["fundo_imagem"])
     draw = ImageDraw.Draw(img_final)
 
-    draw.text((PADDING, 20), "My Pantone Birth Chart Palette", fill="white", font=font_titulo)
+    draw.text((PADDING, 20), TEXTO_TITULO_PANTONE, fill="white", font=font_titulo)
 
     # --- LOOP DINÂMICO ---
     href_atual = window.location.href.split('?')[0].split('#')[0]
@@ -873,7 +913,7 @@ def exportar_pantone_chart(event):
             draw.text((x_bloco + 20, y_bloco + 20), info['cat'].upper(), fill="white", font=font_pkmn)
             draw.text((x_bloco + 20, y_bloco + 50), info['name'], fill="white", font=font_titulo)
             draw.text((x_bloco + 20, y_bloco + 320), hex_chave, fill="white", font=font_hex)
-            draw.text((x_bloco + 20, y_bloco + 350), f"{t('pantone_match_prefixo')}{info['code']}", fill="white", font=font_pkmn)
+            draw.text((x_bloco + 20, y_bloco + 350), f"{TEXTO_PANTONE_MATCH_PREFIXO}{info['code']}", fill="white", font=font_pkmn)
             
         else:
             # Caso 2: Cor customizada (reaproveita buscar_nome_cor, que já usa
@@ -881,7 +921,7 @@ def exportar_pantone_chart(event):
             nome_aproximado = buscar_nome_cor(cor_hex, COLOR_DATA)
 
             # Imprime Categoria Fixa
-            draw.text((x_bloco + 20, y_bloco + 20), t('categoria_paleta'), fill="white", font=font_pkmn)
+            draw.text((x_bloco + 20, y_bloco + 20), TEXTO_CATEGORIA_PALETA, fill="white", font=font_pkmn)
             
             # Limpa acentos e aplica a quebra esperta de texto
             import textwrap
@@ -916,6 +956,9 @@ def exportar_pantone_chart(event):
         except Exception as e:
             print(f"Erro sprite Pantone: {e}")
 
+    # Link do site, centralizado no rodapé (área extra reservada em ALTURA_RODAPE)
+    desenhar_link_site(draw, img_largura, img_altura - 40, font_hex, PALETA["texto_terciario"])
+
     # --- EXPORTAÇÃO (Mesma lógica das outras funções) ---
     buffered = BytesIO()
     img_final.save(buffered, format="PNG")
@@ -945,7 +988,7 @@ def exportar_pantone_chart(event):
                         </style>
                     </head>
                     <body>
-                        <img src="{data_url}" alt="Sua Moodboard Pokémon 9:16">
+                        <img src="{data_url}" alt="Your Pokémon Moodboard 9:16">
                         <p>{t('ios_instrucao')}</p>
                     </body>
                     </html>
@@ -954,7 +997,7 @@ def exportar_pantone_chart(event):
         else:
             a = document.createElement("a")
             a.href = data_url
-            a.download = "meu-moodboard-pokemon.png"
+            a.download = "pokemon-pantone-birth-chart-palette.png"
             a.click()
 
     except Exception as e:

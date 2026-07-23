@@ -52,16 +52,22 @@ const TRADUCOES = {
         btn_aleatorio: "Paleta Aleatória",
         idioma_alternar: "English",
 
-        // Usadas pelo app.py (imagens exportadas e pop-ups do iOS)
-        categoria_paleta: "PALETTE",
-        pantone_match_prefixo: "Pantone match: ",
-        titulo_imagem_horizontal: "MINHA PALETA POKÉMON",
+        // Tooltip ao passar o mouse sobre um Pokémon na tela, e textos do
+        // pop-up do iOS ("segure pra salvar") — isso é interface (DOM) que
+        // a PESSOA lê enquanto usa o site, não pixels da imagem exportada,
+        // então continuam respeitando o idioma escolhido.
         tooltip_clique_salvar: "(Clique para salvar)",
         ios_titulo_paleta: "Salvar Paleta",
         ios_titulo_stories: "Salvar Paleta Stories",
         ios_titulo_moodboard: "Salvar Moodboard",
         ios_instrucao: 'Pressione e segure na imagem para "Adicionar às Fotos"',
         ios_instrucao_stories: 'Pressione e segure na imagem para "Adicionar às Fotos" e postar nos Stories!',
+
+        // NOTA: os textos DESENHADOS DENTRO da imagem PNG (título, "PALETTE",
+        // "Pantone match:", link do site etc.) NÃO ficam aqui — são fixos em
+        // inglês, direto no app.py
+        // (TEXTO_TITULO_PALETA, TEXTO_IOS_TITULO_PALETA etc.), de propósito,
+        // pra imagem compartilhada ficar igual pra todo mundo.
     },
     "en": {
         titulo: "Pokémon Palette Customizer",
@@ -109,10 +115,6 @@ const TRADUCOES = {
         btn_aleatorio: "Random Palette",
         idioma_alternar: "Português",
 
-        // Used by app.py (exported images and iOS pop-ups)
-        categoria_paleta: "PALETTE",
-        pantone_match_prefixo: "Pantone match: ",
-        titulo_imagem_horizontal: "MY POKÉMON PALETTE",
         tooltip_clique_salvar: "(Click to save)",
         ios_titulo_paleta: "Save Palette",
         ios_titulo_stories: "Save Stories Palette",
