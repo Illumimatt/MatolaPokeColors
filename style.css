@@ -1,0 +1,521 @@
+/* --- MAPEAMENTO DO TEMA POKÉMON --- */
+:root {
+    /* Cores da INTERFACE — se adaptam ao modo claro/escuro do dispositivo
+       (ver bloco @media (prefers-color-scheme: light) mais abaixo).
+       Lidas dinamicamente pelo app.py via getComputedStyle. */
+    --background: #14141a;
+    --card: #1b1b27;
+    --border: #2d2d43;
+    --input-bg: #252e37;
+    
+    --foreground: #f4f4f6;
+    --muted-foreground: #98a6b3;
+    
+    --primary: #ffd91a;
+    --primary-foreground: #0a0a0a;
+
+    --btn-pantone: #020202;
+    --btn-random: #7d7d9b;
+    --btn-export: #ffd91a;
+
+    --text-on-accent: #FFFFF0;
+
+    /* Paleta usada SÓ nas imagens PNG exportadas pelo app.py. Fica fixa
+       de propósito — não muda com o tema do dispositivo — pra quem recebe
+       a imagem exportada (ex: no Instagram) sempre ver a mesma estética,
+       independente do modo claro/escuro de quem gerou. */
+    --export-bg: #1b1b1b;
+    --export-text-primary: #FFFFF0;    /* nomes de Pokémon nas imagens (marfim) */
+    --export-text-secondary: #cbd5e1;  /* hex da cor nas imagens */
+    --export-text-tertiary: #94a3b8;   /* legendas menores, nomes de cor */
+    --export-text-quaternary: #64748b; /* segunda linha de nomes quebrados */
+    --export-text-highlight: #e2e8f0;  /* linha de destaque nos cards Pantone */
+    
+    --radius: 0.625rem;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.4);
+}
+
+/* --- MODO CLARO ---
+   Ativado automaticamente quando o SISTEMA OPERACIONAL do usuário está em
+   modo claro. Só redefine as variáveis de INTERFACE — as de --export-*
+   ficam de fora de propósito, pra manter a imagem exportada consistente. */
+@media (prefers-color-scheme: light) {
+    :root {
+        --background: #f4f4f6;
+        --card: #ffffff;
+        --border: #dde1e8;
+        --input-bg: #eef1f5;
+
+        --foreground: #14141a;
+        --muted-foreground: #5b6472;
+
+        --primary-foreground: #0a0a0a;
+        --primary: #020202;
+        /* --primary, --btn-random, --btn-export e --text-on-accent ficam
+           iguais nos dois temas: são cores de "marca"/acento fixas, feitas
+           pra funcionar tanto num fundo claro quanto escuro. */
+    }
+}
+
+/* Suporte opcional se estiver usando o motor do Tailwind v4 em paralelo */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+}
+
+@font-face {
+    font-family: 'PixelOperator';
+    src: url('fonts/PixelOperator.ttf') format('truetype'); 
+}
+
+@font-face {
+    font-family: 'VCR';
+    src: url('fonts/VCR_OSD_MONO_1.001.ttf') format('truetype');
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'PixelOperator', monospace !important; 
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    padding: 30px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.btn-idioma {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.95rem;
+    box-shadow: var(--shadow-sm);
+}
+.btn-idioma:hover { background: var(--border); }
+
+h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+    text-align: center;
+    letter-spacing: -0.025em;
+}
+
+.subtitle {
+    font-size: 1.5rem;
+    color: var(--muted-foreground);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.link-destaque {
+    color: var(--primary);
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+/* --- Seção de Ajuda --- */
+.help-section {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    width: 100%;
+    max-width: 550px;
+    margin-bottom: 30px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+}
+
+.help-summary {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary);
+    outline: none;
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.help-content {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 1rem;
+    color: var(--muted-foreground);
+    line-height: 1.5;
+}
+
+.help-content p { margin-bottom: 8px; }
+
+/* --- Controles e Cores --- */
+.controls {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 30px;
+    width: 100%;
+    max-width: 550px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+input[type="color"] {
+    -webkit-appearance: none;
+    border: 1px solid var(--border);
+    width: 40px;
+    height: 38px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: none;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 1.1rem;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--primary);
+    font-weight: 500;
+    outline: none;
+    width: 100%;
+}
+input[type="text"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 217, 26, 0.2);
+    background-color: var(--card);
+}
+
+/* --- Modal de Filtros --- */
+.filter-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.btn-filter {
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+.btn-filter:hover { background: var(--border); }
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+.modal-overlay.mostrar { display: flex; }
+
+.modal-box {
+    background: var(--card);
+    padding: 25px 30px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0px 10px 40px rgba(0,0,0,0.8);
+    width: 90%;
+    max-width: 450px; 
+    max-height: 85vh; 
+    overflow-y: auto; 
+    text-align: left;
+    position: relative;
+}
+
+.modal-title {
+    margin-top: 0;
+    color: #f8fafc;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.filter-section {
+    background: var(--background);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 15px;
+}
+
+.filter-section h4 {
+    color: var(--primary); 
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    gap: 10px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    color: var(--muted-foreground);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    margin-right: 8px;
+    cursor: pointer;
+    transform: scale(1.1); 
+}
+
+.btn-close-modal {
+    padding: 8px 30px;
+    border-radius: 6px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    display: block;
+    margin: 0 auto;
+}
+.btn-close-modal:hover { background: #dc2626; }
+
+/* --- Saída e Botões --- */
+#output-container {
+    width: 100%;
+    max-width: 940px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+#output-container .color-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+    margin-bottom: 0;
+    flex-wrap: wrap;
+}
+
+#output-container span {
+    font-weight: 600;
+    color: var(--foreground) !important;
+    text-transform: capitalize;
+    letter-spacing: -0.01em;
+}
+
+.bottom-actions {
+    width: 100%;
+    max-width: 550px;
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn {
+    width: 100%;
+    padding: 14px;
+    color: var(--text-on-accent);
+    font-size: 1.25rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.btn:hover { transform: scale(1.01); }
+.btn:active { transform: scale(0.99); }
+
+#btn-exportar_pantone_chart { background-color: var(--btn-pantone); color: var(--text-on-accent); }
+#btn-exportar_pantone_chart:hover { filter: brightness(1.1); }
+#btn-exportar { background-color: var(--btn-export); color: var(--primary-foreground); }
+#btn-exportar:hover { filter: brightness(1.1); }
+#btn-stories { background-color: var(--btn-random); color: var(--text-on-accent); }
+#btn-stories:hover { filter: brightness(1.1); }
+#btn-aleatorio { background-color: #1e293b; border: 1px solid var(--border); }
+#btn-aleatorio:hover { background-color: #334155; }
+
+@media (min-width: 768px) {
+    body { padding: 40px 20px; }
+    h1 { font-size: 4rem; }
+    .controls { grid-template-columns: repeat(4, 1fr); padding: 30px; }
+    
+    #output-container .color-row {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 15px;
+    }
+    #output-container .color-row > div:first-child {
+        grid-column: auto;
+        width: 96px !important;
+        height: 96px !important;
+    }
+    #output-container span {
+        font-weight: 600;
+        color: var(--foreground) !important;
+        text-transform: capitalize;
+        letter-spacing: -0.01em;
+    }
+}
+
+.btn-excluir {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 1.4rem;
+    font-family: 'PixelOperator', monospace !important;
+    cursor: pointer;
+    padding: 0 5px;
+    font-weight: bold;
+}
+.btn-excluir:hover {
+    color: #dc2626;
+    transform: scale(1.1);
+}
+
+input[type="color"].cor-editavel-bot {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    border-radius: 8px;
+    overflow: hidden; 
+    cursor: pointer;
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    min-height: 60px;
+    flex-shrink: 0;
+}
+input[type="color"].cor-editavel-bot::-webkit-color-swatch-wrapper { padding: 0; border: none; }
+input[type="color"].cor-editavel-bot::-webkit-color-swatch { border: none !important; transform: scale(1.5); }
+input[type="color"].cor-editavel-bot::-moz-color-swatch { border: none !important; transform: scale(1.5); }
+
+/* --- Cards de resultado gerados dinamicamente por app/ui.py ---
+   Antes, cada uma dessas propriedades era atribuída em Python via
+   elemento.style.propriedade = valor; agora ui.py só define a className e
+   toda a aparência mora aqui, junto do resto do tema. */
+.grupo-cor-editavel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 3px;
+    border-radius: 12px;
+    min-height: 110px;
+    transform: translateY(-6px);
+}
+.grupo-cor-editavel:hover {
+    background-color: var(--input-bg); 
+    cursor: pointer;
+}
+
+input[type="text"].hex-input-editavel {
+    width: 90px;
+    background: transparent;
+    border: none;
+    color: var(--muted-foreground);
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+}
+
+.nome-cor-detectado {
+    font-size: 14px;
+    color: var(--muted-foreground);
+    margin-top: -6px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.cartao-pokemon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100px;
+}
+
+.sprite-pokemon {
+    width: 96px;
+    height: 96px;
+    cursor: pointer;
+    image-rendering: pixelated;
+    transition: transform 0.15s ease;
+}
+/* Zoom ao passar o mouse -- antes feito com onmouseover/onmouseout em
+   Python, trocado por um simples :hover, que é o lugar certo pra isso. */
+.sprite-pokemon:hover {
+    transform: scale(2.0);
+}
+
+.nome-pokemon-card {
+    font-size: 16px;
+    margin-top: 2px;
+    text-align: center;
+    color: var(--muted-foreground);
+}
