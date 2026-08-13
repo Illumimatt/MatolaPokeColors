@@ -163,9 +163,34 @@
     <!-- Chama o arquivo JS externo da interface -->
     <script src="script.js"></script>
 
-    <!-- Chama o arquivo Python principal -->
-    <script type="py" src="./app.py" 
-            config='{"packages": ["requests", "numpy", "matplotlib", "pillow"], "fetch": [{"files": ["fonts/VCR_OSD_MONO_1.001.ttf"]}]}' 
+    <!--
+        Chama o pacote Python principal (app/main.py). O Python está
+        dividido em módulos (app/*.py) em vez de um único arquivo -- o
+        campo "files" do config abaixo copia cada um pro sistema de
+        arquivos virtual do Pyodide antes de rodar main.py, o que permite
+        os "from . import X" normais entre eles.
+
+        numpy/matplotlib foram removidos daqui: nenhum dos dois é usado em
+        nenhum lugar do código, e ambos são pesados pra baixar só pra ficar
+        parados (cada um soma vários MB ao carregamento inicial da página).
+    -->
+    <script type="py" src="./app/main.py"
+            config='{
+                "packages": ["requests", "pillow"],
+                "files": {
+                    "./app/__init__.py": "./app/__init__.py",
+                    "./app/config.py": "./app/config.py",
+                    "./app/i18n.py": "./app/i18n.py",
+                    "./app/theme.py": "./app/theme.py",
+                    "./app/color_math.py": "./app/color_math.py",
+                    "./app/color_naming.py": "./app/color_naming.py",
+                    "./app/pokemon_data.py": "./app/pokemon_data.py",
+                    "./app/image_export.py": "./app/image_export.py",
+                    "./app/exportadores.py": "./app/exportadores.py",
+                    "./app/ui.py": "./app/ui.py",
+                    "./fonts/VCR_OSD_MONO_1.001.ttf": "./fonts/VCR_OSD_MONO_1.001.ttf"
+                }
+            }'
             async></script>
 </body>
 </html>
