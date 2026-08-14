@@ -29,6 +29,7 @@ async def carregar_dados_iniciais():
     if await pokemon_data.carregar_poke_data():
         # Dispara a geração automática direto, sem esperar o banco de nomes
         gerar_paleta(None)
+        pokemon_data.preparar_busca_pokemon_js()
 
     if await pokemon_data.carregar_banco_cores():
         color_naming.preparar_banco_cores(pokemon_data.COLOR_DATA)

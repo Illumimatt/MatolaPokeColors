@@ -64,14 +64,58 @@
         <button id="btn-add-cor" class="btn-filter" style="margin-top: 15px; width: 100%;" data-i18n="btn_add_cor">+ Adicionar Cor</button>
     </div>
 
-    <!-- Botão de Filtros -->
+    <!-- Botões de Ação: Buscar Pokémon + Filtros -->
     <div class="filter-container">
+        <button id="btn-abrir-busca-pokemon" class="btn-filter" data-i18n="btn_buscar_pokemon">Buscar Pokémon</button>
         <button id="btn-abrir-filtros" class="btn-filter" data-i18n="btn_abrir_filtros">Filtros de Pokémon</button>
+    </div>
+
+    <!-- Modal de Busca de Pokémon -->
+    <div id="modal-busca-pokemon" class="modal-overlay">
+        <div class="modal-box modal-busca-pokemon-box">
+            <button id="busca-pokemon-fechar" class="modal-btn-fechar"
+                    data-i18n-title="busca_pokemon_fechar" title="Fechar" type="button">X</button>
+
+            <!-- Vista 1: campo de busca + resultados -->
+            <div id="busca-pokemon-view-lista">
+                <input type="text" id="busca-pokemon-input" class="busca-pokemon-input"
+                       placeholder="Buscar Pokémon..." data-i18n-placeholder="busca_pokemon_placeholder">
+                <div id="busca-pokemon-resultados" class="busca-pokemon-resultados"></div>
+            </div>
+
+            <!-- Vista 2: Pokémon escolhido + onde colocar a cor -->
+            <div id="busca-pokemon-view-resultado" style="display: none;">
+                <div class="busca-pokemon-topo">
+                    <button id="busca-pokemon-voltar" class="busca-pokemon-icone-btn"
+                            data-i18n-title="busca_pokemon_voltar" title="Voltar" type="button">←</button>
+                </div>
+
+                <div class="busca-pokemon-detalhe">
+                    <div class="busca-pokemon-coluna">
+                        <div id="busca-pokemon-swatch" class="busca-pokemon-swatch"></div>
+                        <div id="busca-pokemon-nome-cor" class="busca-pokemon-nome-cor"></div>
+                        <button id="busca-pokemon-hex" class="busca-pokemon-hex" type="button"></button>
+                    </div>
+                    <div class="busca-pokemon-coluna">
+                        <img id="busca-pokemon-sprite" class="busca-pokemon-sprite" alt="">
+                        <div id="busca-pokemon-nome-pkmn" class="busca-pokemon-nome-pkmn"></div>
+                    </div>
+                </div>
+
+                <div class="busca-pokemon-adicionar">
+                    <div class="busca-pokemon-adicionar-label" data-i18n="busca_pokemon_adicionar_a">Adicionar a</div>
+                    <div id="busca-pokemon-slots" class="busca-pokemon-slots"></div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
  <!-- Modal de Filtros -->
     <div id="modal-overlay" class="modal-overlay">
         <div class="modal-box">
+            <button id="btn-x-filtros" class="modal-btn-fechar"
+                    data-i18n-title="busca_pokemon_fechar" title="Fechar" type="button">X</button>
             <h3 class="modal-title" data-i18n="modal_titulo">Filtros Avançados</h3>
             
             <!-- Grupo 1: Regras da Paleta -->

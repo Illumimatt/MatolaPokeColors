@@ -16,6 +16,15 @@ const TRADUCOES = {
         ajuda_passo4: "4. Cole as cores aqui no nosso gerador e veja a mágica acontecer!",
         btn_add_cor: "+ Adicionar Cor",
         btn_abrir_filtros: "Filtros de Pokémon",
+        btn_buscar_pokemon: "Buscar Pokémon",
+        busca_pokemon_placeholder: "Nome do Pokémon...",
+        busca_pokemon_nenhum_resultado: "Nenhum Pokémon encontrado",
+        busca_pokemon_voltar: "Voltar",
+        busca_pokemon_fechar: "Fechar",
+        busca_pokemon_adicionar_a: "Adicionar a",
+        busca_pokemon_sobrescrever: "Substituir esta cor",
+        busca_pokemon_adicionar_nova: "Adicionar como nova cor",
+        busca_pokemon_copiado: "Copiado!",
         modal_titulo: "Filtros Avançados",
         filtro_secao_regras: "Regras do Gerador",
         filtro_secao_biologia: "Biologia e Raridade",
@@ -79,6 +88,15 @@ const TRADUCOES = {
         ajuda_passo4: "4. Paste the colors here in our generator and watch the magic happen!",
         btn_add_cor: "+ Add Color",
         btn_abrir_filtros: "Pokémon Filters",
+        btn_buscar_pokemon: "Search Pokémon",
+        busca_pokemon_placeholder: "Pokémon name...",
+        busca_pokemon_nenhum_resultado: "No Pokémon found",
+        busca_pokemon_voltar: "Back",
+        busca_pokemon_fechar: "Close",
+        busca_pokemon_adicionar_a: "Add to",
+        busca_pokemon_sobrescrever: "Replace this color",
+        busca_pokemon_adicionar_nova: "Add as new color",
+        busca_pokemon_copiado: "Copied!",
         modal_titulo: "Advanced Filters",
         filtro_secao_regras: "Generator Rules",
         filtro_secao_biologia: "Biology & Rarity",
@@ -162,6 +180,9 @@ function aplicarTraducoes() {
     document.querySelectorAll("[data-i18n-title]").forEach((el) => {
         el.title = window.t(el.dataset.i18nTitle);
     });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        el.placeholder = window.t(el.dataset.i18nPlaceholder);
+    });
 
     const btnIdioma = document.getElementById("btn-idioma");
     if (btnIdioma) btnIdioma.textContent = "🌐 " + window.t("idioma_alternar");
@@ -187,6 +208,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // ==========================================
     const btnAbrir = document.getElementById("btn-abrir-filtros");
     const btnFechar = document.getElementById("btn-fechar-filtros");
+    const btnXFiltros = document.getElementById("btn-x-filtros");
     const overlay = document.getElementById("modal-overlay");
 
     // Verifica se os botões do modal existem antes de adicionar o evento
@@ -198,6 +220,14 @@ document.addEventListener("DOMContentLoaded", function() {
         btnFechar.addEventListener("click", function() {
             overlay.classList.remove("mostrar");
         });
+
+        // X no canto: mesma ação de clicar fora do modal (só fecha, sem
+        // reaplicar os filtros -- quem quer aplicar usa "Aplicar e Voltar")
+        if (btnXFiltros) {
+            btnXFiltros.addEventListener("click", function() {
+                overlay.classList.remove("mostrar");
+            });
+        }
 
         overlay.addEventListener("click", function(event) {
             if (event.target.id === 'modal-overlay') {
@@ -281,25 +311,29 @@ document.addEventListener("DOMContentLoaded", function() {
 
     document.querySelectorAll('#lista-cores .color-row').forEach(sincronizarInputs);
     
-    if (btnAddCor && listaCores) { 
-        btnAddCor.addEventListener('click', () => {
-            const novaLinha = document.createElement('div');
-            novaLinha.className = 'color-row';
+    // Cria uma nova linha de cor e a insere em #lista-cores. Se `hexInicial`
+    // não for passado, sorteia uma cor aleatória (comportamento original do
+    // botão "+ Adicionar Cor"). Reaproveitada pela busca de Pokémon pra
+    // adicionar uma cor já preenchida, sem duplicar a lógica de criação.
+    function criarLinhaDeCor(hexInicial) {
+        const novaLinha = document.createElement('div');
+        novaLinha.className = 'color-row';
 
-            const corAleatoria = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
-            
-            novaLinha.innerHTML = `
-                <input type="color" class="cor-input" value="${corAleatoria}">
-                <input type="text" class="hex-input" value="${corAleatoria}" maxlength="8">
-                <button class="btn-excluir">X</button>
-            `;
+        const hex = hexInicial || ('#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0').toUpperCase());
 
-            // Agora o listaCores com certeza existe!
-            listaCores.appendChild(novaLinha);
-            
-            // Sincroniza a nova linha gerada
-            sincronizarInputs(novaLinha);
-        });
+        novaLinha.innerHTML = `
+            <input type="color" class="cor-input" value="${hex}">
+            <input type="text" class="hex-input" value="${hex}" maxlength="8">
+            <button class="btn-excluir">X</button>
+        `;
+
+        listaCores.appendChild(novaLinha);
+        sincronizarInputs(novaLinha);
+        return novaLinha;
+    }
+
+    if (btnAddCor && listaCores) {
+        btnAddCor.addEventListener('click', () => criarLinhaDeCor(null));
     }
     // ==========================================
     // 3. LÓGICA DE EXCLUIR COR
@@ -319,13 +353,189 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     }
+
+    // ==========================================
+    // 4. MODAL DE BUSCA DE POKÉMON
+    // ==========================================
+    const btnAbrirBusca = document.getElementById('btn-abrir-busca-pokemon');
+    const overlayBusca = document.getElementById('modal-busca-pokemon');
+    const viewLista = document.getElementById('busca-pokemon-view-lista');
+    const viewResultado = document.getElementById('busca-pokemon-view-resultado');
+    const inputBusca = document.getElementById('busca-pokemon-input');
+    const resultadosEl = document.getElementById('busca-pokemon-resultados');
+    const btnVoltarBusca = document.getElementById('busca-pokemon-voltar');
+    const btnFecharBusca = document.getElementById('busca-pokemon-fechar');
+    const swatchEl = document.getElementById('busca-pokemon-swatch');
+    const nomeCorEl = document.getElementById('busca-pokemon-nome-cor');
+    const hexEl = document.getElementById('busca-pokemon-hex');
+    const spriteEl = document.getElementById('busca-pokemon-sprite');
+    const nomePkmnEl = document.getElementById('busca-pokemon-nome-pkmn');
+    const slotsEl = document.getElementById('busca-pokemon-slots');
+
+    if (btnAbrirBusca && overlayBusca && listaCores) {
+        let pokemonSelecionado = null;
+
+        function caminhoSprite(p) {
+            const isShiny = p.name.includes('(Shiny)');
+            return `./sprites/${p.id_base}${isShiny ? '_shiny' : ''}.png`;
+        }
+
+        function mostrarViewLista() {
+            viewLista.style.display = '';
+            viewResultado.style.display = 'none';
+        }
+
+        function mostrarViewResultado() {
+            viewLista.style.display = 'none';
+            viewResultado.style.display = '';
+        }
+
+        function abrirBusca() {
+            overlayBusca.classList.add('mostrar');
+            mostrarViewLista();
+            inputBusca.value = '';
+            renderizarResultados('');
+            setTimeout(() => inputBusca.focus(), 50);
+        }
+
+        function fecharBusca() {
+            overlayBusca.classList.remove('mostrar');
+        }
+
+        // Mostra até 8 resultados por vez -- o suficiente pra achar o que
+        // se quer digitando poucas letras, sem virar uma lista infinita
+        function renderizarResultados(termo) {
+            resultadosEl.innerHTML = '';
+            const termoNormalizado = termo.trim().toLowerCase();
+            if (!termoNormalizado) return;
+
+            const encontrados = (BUSCA_POKEMON_JS || [])
+                .filter(p => p.name.toLowerCase().includes(termoNormalizado))
+                .slice(0, 8);
+
+            if (encontrados.length === 0) {
+                const vazio = document.createElement('div');
+                vazio.className = 'busca-pokemon-vazio';
+                vazio.textContent = window.t('busca_pokemon_nenhum_resultado');
+                resultadosEl.appendChild(vazio);
+                return;
+            }
+
+            encontrados.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'busca-pokemon-item';
+
+                const swatch = document.createElement('div');
+                swatch.className = 'busca-pokemon-item-swatch';
+                swatch.style.backgroundColor = p.hex;
+
+                const sprite = document.createElement('img');
+                sprite.className = 'busca-pokemon-item-sprite';
+                sprite.src = caminhoSprite(p);
+                sprite.alt = '';
+                sprite.loading = 'lazy';
+
+                const nome = document.createElement('span');
+                nome.textContent = p.name;
+
+                item.append(swatch, sprite, nome);
+                item.addEventListener('click', () => selecionarPokemon(p));
+                resultadosEl.appendChild(item);
+            });
+        }
+
+        function selecionarPokemon(p) {
+            pokemonSelecionado = p;
+
+            swatchEl.style.backgroundColor = p.hex;
+            hexEl.textContent = p.hex;
+
+            spriteEl.src = caminhoSprite(p);
+            nomePkmnEl.textContent = p.name;
+
+            // Mesma busca de nome de cor usada no resto do site (recebe o
+            // Lab direto, sem precisar reconverter a partir do hex)
+            nomeCorEl.textContent = window.buscarNomeCorJS ? window.buscarNomeCorJS(p.lab) : '';
+
+            renderizarSlots();
+            mostrarViewResultado();
+        }
+
+        function renderizarSlots() {
+            slotsEl.innerHTML = '';
+
+            document.querySelectorAll('#lista-cores .color-row').forEach(linha => {
+                const corInput = linha.querySelector('.cor-input');
+                const slot = document.createElement('div');
+                slot.className = 'busca-pokemon-slot';
+                slot.style.backgroundColor = corInput.value;
+                slot.title = window.t('busca_pokemon_sobrescrever');
+                slot.addEventListener('click', () => aplicarCor(linha));
+                slotsEl.appendChild(slot);
+            });
+
+            const slotAdicionar = document.createElement('div');
+            slotAdicionar.className = 'busca-pokemon-slot busca-pokemon-slot-add';
+            slotAdicionar.textContent = '+';
+            slotAdicionar.title = window.t('busca_pokemon_adicionar_nova');
+            slotAdicionar.addEventListener('click', () => aplicarCor(null));
+            slotsEl.appendChild(slotAdicionar);
+        }
+
+        // linhaExistente = null -> adiciona uma cor nova; senão, sobrescreve
+        // a linha clicada
+        function aplicarCor(linhaExistente) {
+            if (!pokemonSelecionado) return;
+            const hex = pokemonSelecionado.hex;
+
+            if (linhaExistente) {
+                linhaExistente.querySelector('.cor-input').value = hex;
+                const hexInput = linhaExistente.querySelector('.hex-input');
+                hexInput.value = hex;
+                hexInput.dataset.ultimoValido = hex;
+            } else {
+                criarLinhaDeCor(hex);
+            }
+
+            listaCores.dispatchEvent(new Event('input', { bubbles: true }));
+            fecharBusca();
+        }
+
+        if (hexEl) {
+            hexEl.addEventListener('click', () => {
+                if (!pokemonSelecionado || !navigator.clipboard) return;
+                navigator.clipboard.writeText(pokemonSelecionado.hex).then(() => {
+                    const textoOriginal = hexEl.textContent;
+                    hexEl.textContent = window.t('busca_pokemon_copiado');
+                    setTimeout(() => { hexEl.textContent = textoOriginal; }, 1200);
+                });
+            });
+        }
+
+        btnAbrirBusca.addEventListener('click', abrirBusca);
+        btnFecharBusca.addEventListener('click', fecharBusca);
+        btnVoltarBusca.addEventListener('click', mostrarViewLista);
+        overlayBusca.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-busca-pokemon') fecharBusca();
+        });
+        inputBusca.addEventListener('input', (e) => renderizarResultados(e.target.value));
+        inputBusca.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const primeiro = resultadosEl.querySelector('.busca-pokemon-item');
+                if (primeiro) primeiro.click();
+            }
+        });
+    }
 });
 
 // ==========================================
-// 4. BUSCA DE NOME DE COR (movida do Python pro JS por performance)
+// 5. DADOS MOVIDOS DO PYTHON PRO JS (performance)
 // ==========================================
+// Duas listas grandes que o Python prepara uma vez (já com Lab
+// pré-calculado) e manda pro JS, pra busca/comparação rodar em loop nativo
+// V8 em vez de cruzar a ponte Python<->JS a cada tecla digitada.
 
-// Guarda o banco de ~32 mil cores já com o Lab pré-calculado (feito 1x pelo Python no load)
+// Banco de ~32 mil cores (nomeação de cor)
 let BANCO_CORES_JS = [];
 
 window.prepararBancoCoresJS = function(dadosPy) {
@@ -333,6 +543,16 @@ window.prepararBancoCoresJS = function(dadosPy) {
     // aninhados em Map do JS (não em objeto comum), e item.l / item.name
     // ficam undefined silenciosamente. Object.fromEntries corrige isso.
     BANCO_CORES_JS = dadosPy.toJs
+        ? dadosPy.toJs({ dict_converter: Object.fromEntries })
+        : dadosPy;
+    return true;
+};
+
+// Lista de ~2678 Pokémon (nome, id, hex, Lab), pra busca por Pokémon
+let BUSCA_POKEMON_JS = [];
+
+window.prepararBuscaPokemonJS = function(dadosPy) {
+    BUSCA_POKEMON_JS = dadosPy.toJs
         ? dadosPy.toJs({ dict_converter: Object.fromEntries })
         : dadosPy;
     return true;

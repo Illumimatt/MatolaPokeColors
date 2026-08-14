@@ -8,10 +8,10 @@ outro módulo continua válido depois que os dados terminam de carregar.
 """
 import heapq
 
-from js import document
+from js import document, window
 from pyodide.http import pyfetch
 
-from .color_math import color_distance
+from .color_math import color_distance, lab_to_hex
 
 # Lista de todos os Pokémon (normal + shiny) com cor, tipo, geração etc.
 # Ver pokemon_colors_simple.json para o formato de cada item.
@@ -55,6 +55,23 @@ async def carregar_banco_cores():
     except Exception as e:
         print(f"Erro ao carregar cores_finais.json: {e}")
         return False
+
+
+def preparar_busca_pokemon_js():
+    """Manda pro JS uma lista leve (nome, id, hex já convertido, Lab) pra
+    alimentar a busca por Pokémon em tempo real, sem round-trip Python a
+    cada tecla digitada -- mesmo raciocínio de performance já usado pro
+    banco de nomes de cor (ver color_naming.preparar_banco_cores)."""
+    lista_para_js = [
+        {
+            "name": p["name"],
+            "id_base": p["id_base"],
+            "hex": lab_to_hex(p["color"]),
+            "lab": p["color"],
+        }
+        for p in poke_data
+    ]
+    window.prepararBuscaPokemonJS(lista_para_js)
 
 
 def invalidar_filtros():

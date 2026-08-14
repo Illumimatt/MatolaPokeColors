@@ -101,14 +101,14 @@ body {
     top: 16px;
     right: 16px;
     z-index: 10;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-radius: 8px;
     background: var(--card);
     color: var(--foreground);
     border: 1px solid var(--border);
     cursor: pointer;
     font-weight: bold;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     box-shadow: var(--shadow-sm);
 }
 .btn-idioma:hover { background: var(--border); }
@@ -223,8 +223,12 @@ input[type="text"]:focus {
 
 /* --- Modal de Filtros --- */
 .filter-container {
-    text-align: center;
+    display: flex;
+    gap: 12px;
     margin-bottom: 20px;
+}
+.filter-container .btn-filter {
+    flex: 1;
 }
 
 .btn-filter {
@@ -273,6 +277,7 @@ input[type="text"]:focus {
     color: #f8fafc;
     text-align: center;
     margin-bottom: 20px;
+    padding: 0 26px;
 }
 
 .filter-section {
@@ -327,6 +332,200 @@ input[type="text"]:focus {
     margin: 0 auto;
 }
 .btn-close-modal:hover { background: #dc2626; }
+
+/* --- X no canto: alternativa de fechar, presente nos dois modais --- */
+.modal-btn-fechar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: var(--muted-foreground);
+    font-size: 1.2rem;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+.modal-btn-fechar:hover {
+    color: var(--foreground);
+}
+
+/* --- Modal de Busca de Pokémon --- */
+.modal-busca-pokemon-box {
+    max-width: 460px;
+}
+
+#busca-pokemon-view-lista {
+    padding-top: 28px;
+}
+
+.busca-pokemon-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1.3rem;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--primary);
+    outline: none;
+    margin-bottom: 15px;
+}
+
+.busca-pokemon-resultados {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.busca-pokemon-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+.busca-pokemon-item:hover {
+    background: var(--input-bg);
+}
+
+.busca-pokemon-item-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    flex-shrink: 0;
+}
+
+.busca-pokemon-item-sprite {
+    width: 44px;
+    height: 44px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+
+.busca-pokemon-vazio {
+    padding: 14px 8px;
+    color: var(--muted-foreground);
+    font-size: 1.15rem;
+    text-align: center;
+}
+
+.busca-pokemon-topo {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.busca-pokemon-icone-btn {
+    background: none;
+    border: none;
+    color: var(--muted-foreground);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+.busca-pokemon-icone-btn:hover {
+    color: var(--foreground);
+}
+
+.busca-pokemon-detalhe {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 20px;
+}
+
+.busca-pokemon-coluna {
+    flex: 1;
+    text-align: center;
+}
+
+/* Cor à esquerda / sprite à direita, no tamanho NATIVO do arquivo (96x96 --
+   os sprites do site inteiro já são 96x96; antes esse modal reduzia pra
+   64px à toa) */
+.busca-pokemon-swatch {
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+    margin: 0 auto 10px;
+}
+
+.busca-pokemon-nome-cor {
+    font-size: 1.1rem;
+    color: var(--muted-foreground);
+    margin-bottom: 6px;
+}
+
+.busca-pokemon-hex {
+    background: none;
+    border: none;
+    color: var(--foreground);
+    font-size: 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+.busca-pokemon-hex:hover {
+    color: var(--primary);
+}
+
+.busca-pokemon-sprite {
+    width: 96px;
+    height: 96px;
+    image-rendering: pixelated;
+    margin: 0 auto 10px;
+}
+
+.busca-pokemon-nome-pkmn {
+    font-size: 1.1rem;
+    color: var(--foreground);
+}
+
+.busca-pokemon-adicionar {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    text-align: center;
+}
+
+.busca-pokemon-adicionar-label {
+    font-size: 1.05rem;
+    color: var(--muted-foreground);
+    margin-bottom: 12px;
+}
+
+.busca-pokemon-slots {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.busca-pokemon-slot {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.busca-pokemon-slot:hover {
+    transform: scale(1.1);
+}
+
+.busca-pokemon-slot-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed var(--border);
+    color: var(--muted-foreground);
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+.busca-pokemon-slot-add:hover {
+    border-color: var(--muted-foreground);
+    color: var(--foreground);
+}
 
 /* --- Saída e Botões --- */
 #output-container {
